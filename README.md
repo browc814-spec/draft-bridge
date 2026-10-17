@@ -8,3 +8,10 @@ A phone-first, offline, single-file web page for rebuilding your EA Sports Colle
 - Data saves in your browser. You can back it up or restore it as JSON, and export a CSV.
 
 Not affiliated with or endorsed by EA or its licensors.
+
+## CFB abilities (v1.1)
+In the player editor you can record each prospect's CFB 26 Physical and Mental abilities, with Bronze/Silver/Gold/Platinum tiers, plus an optional archetype. They're for reference only: Madden assigns its own abilities, and no verified mapping exists.
+
+Ability sources:
+- QB/HB/WR/LB/CB archetypes and the 16 mental abilities: [CFB Labs](https://www.cfblabs.com/cfb-26/ability-requirements).
+- FB/TE/OL/DL/S/K/P: a pre-release list from The Game Haus / collegefootball.gg, which may be incomplete.

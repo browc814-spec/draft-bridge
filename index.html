@@ -75,6 +75,22 @@ ol.how li{margin:6px 0}
 .tgt .stp button{min-width:40px;min-height:44px}
 .tgt div{background:var(--panel2);border-radius:10px;padding:6px;text-align:center;font-size:13px}
 .empty{color:var(--mut);text-align:center;padding:24px 8px}
+.abch{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.abch button{min-height:40px;padding:6px 10px;font-size:14px;font-weight:600;border-radius:20px}
+.abch button.sel{background:#173a2a;border-color:var(--acc);color:var(--acc)}
+.abch button.sug{border-style:dashed}
+.abrow{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--line)}
+.abrow .an{flex:1;font-weight:700;font-size:14px;min-width:0}
+.abrow .an small{display:block;font-weight:500;color:var(--mut);font-size:11px}
+.tiers{display:flex;gap:4px}
+.tiers button{min-width:38px;min-height:40px;padding:0;font-size:13px;font-weight:800;border-radius:10px}
+.tiers button.on{color:#111}
+.t-Bronze.on{background:#cd7f32;border-color:#cd7f32}.t-Silver.on{background:#c0c7d2;border-color:#c0c7d2}
+.t-Gold.on{background:#ffd23f;border-color:#ffd23f}.t-Platinum.on{background:#9fe8ff;border-color:#9fe8ff}
+.abrow .x{min-width:40px;min-height:40px;padding:0;color:var(--bad)}
+.tb{display:inline-block;font-size:11px;font-weight:800;padding:1px 6px;border-radius:6px;margin:2px 3px 0 0;color:#111}
+.tb.Bronze{background:#cd7f32}.tb.Silver{background:#c0c7d2}.tb.Gold{background:#ffd23f}.tb.Platinum{background:#9fe8ff}.tb.none{background:var(--panel2);color:var(--mut)}
+.abref{background:var(--panel);border:1px dashed var(--blue);border-radius:12px;padding:10px 12px;margin:8px 0}
 </style>
 </head>
 <body>
@@ -238,6 +254,43 @@ const CONV = {
   roundBonus:{1:3,2:2,3:1,4:0,5:-1,6:-2,7:-3,8:-4}, // applied to skill+mental; 8 = UDFA
   min:25,max:99
 };
+/* ---- CFB 26 Abilities ----
+   Tiers: Bronze/Silver/Gold/Platinum (EA CFB 26 Dynasty deep dive).
+   QB/HB/WR/LB/CB archetypes + abilities: CFB Labs ability-requirements data (post-release).
+   FB/TE/OL/DL/S/K/P: The Game Haus list via collegefootball.gg (pre-release, June 2025) — may be incomplete; use "Other".
+   Mental list (16): CFB Labs ability descriptions. Position-suggested mental: ClutchPoints RTG guide (QB/HB/WR/MIKE/CB only). */
+const ABILITY_TIERS = ["Bronze","Silver","Gold","Platinum"];
+const LB_ARCH = {"Signal Caller":["Take Down","Wrap Up","Workhorse","Blow Up","Hammer"],"Lurker":["Knockout","House Call","Robber","Bouncer","Wrap Up"],"Thumper":["Grip Breaker","Wrap Up","Aftershock","Blow Up","Hammer"]};
+const OL_POOL = ["Screen Enforcer","Quick Step","Option Shield","Outside Shield","Inside Shield","Quick Drop","Pocket Shield","PA Shield","Strong Grip","Wear Down","Workhorse","Second Level","Ground N Pound"];
+const DL_POOL = ["Grip Breaker","Inside Disruptor","Outside Disruptor","Option Disruptor","Pocket Disruptor","Workhorse","Quick Jump","Duress","Take Down","Recoup"];
+const S_POOL = ["Aftershock","Wrap Up","Hammer","Blow Up","Workhorse","Ball Hawk","Lay Out","House Call","Robber","Knockout"];
+const KP_ARCH = {"Accurate":["Chip Shot","Deep Range","Mega Leg"],"Power":["Deep Range","Mega Leg","Coffin Corner"]};
+const PHYS_BY_POS = {
+  QB:{arch:{"Pocket Passer":["Resistance","Step Up","Sleight of Hand","Dot!","On Time"],"Dual Threat":["Downhill","Extender","Option King","Dot!","Mobile Resistance"],"Backfield Creator":["Off Platform","Pull Down","On Time","Sleight of Hand","Mobile Deadeye"],"Pure Runner":["Magician","Option King","Shifty","Side Step","Workhorse"]}},
+  HB:{arch:{"Contact Seeker":["Downhill","Workhorse","Battering Ram","Ball Security","Balanced"],"East West Playmaker":["Recoup","Shifty","Side Step","360","Arm Bar"],"Backfield Threat":["360","Safety Valve","Takeoff","Side Step","Recoup"],"Elusive Bruiser":["Shifty","Headfirst","Side Step","Downhill","Arm Bar"],"North South Receiver":["Balanced","Arm Bar","Safety Valve","Headfirst","Downhill"],"North South Blocker":["Headfirst","Balanced","Sidekick","Ball Security","Strong Grip"]}},
+  FB:{arch:{"Blocking":["Strong Grip","Second Level","Pocket Shield","Sidekick","Screen Enforcer"],"Utility":["Screen Enforcer","Balanced","Safety Valve","Sidekick","Recoup"]},unverified:true},
+  WR:{arch:{"Speedster":["Side Step","Double Dip","Takeoff","Recoup","Shifty"],"Elusive Route Runner":["360","Cutter","Double Dip","Recoup","Side Step"],"Physical Route Runner":["Downhill","Press Pro","Sure Hands","50/50","Cutter"],"Contested Specialist":["50/50","Workhorse","Balanced","Headfirst","Downhill"],"Gritty Possession":["Second Level","Outside Shield","Strong Grip","Workhorse","Sure Hands"],"Gadget":["Side Step","Shifty","Dot!","Cutter","Extender"],"Route Artist":["Cutter","Lay Out","Recoup","Double Dip","Sure Hands"]}},
+  TE:{pool:["Workhorse","Strong Grip","Sure Hands","Outside Shield","Battering Ram","Balanced","50/50","Cutter","Downhill","Wear Down","Quick Drop","Pocket Shield","Second Level","Takeoff","Recoup"],unverified:true},
+  LT:{pool:OL_POOL,unverified:true},LG:{pool:OL_POOL,unverified:true},C:{pool:OL_POOL,unverified:true},RG:{pool:OL_POOL,unverified:true},RT:{pool:OL_POOL,unverified:true},
+  LEDG:{pool:DL_POOL,unverified:true},DT:{pool:DL_POOL,unverified:true},REDG:{pool:DL_POOL,unverified:true},
+  SAM:{arch:LB_ARCH},MIKE:{arch:LB_ARCH},WILL:{arch:LB_ARCH},
+  CB:{arch:{"Boundary Corner":["Jammer","Blanket Coverage","Lay Out","Wrap Up","Quick Jump"],"Bump and Run":["Blanket Coverage","Jammer","House Call","Ball Hawk","Knockout"],"Field Corner":["Wrap Up","Robber","Knockout","Blanket Coverage","Ball Hawk"],"Zone":["Knockout","Lay Out","House Call","Ball Hawk","Bouncer"]}},
+  FS:{pool:S_POOL,unverified:true},SS:{pool:S_POOL,unverified:true},
+  K:{arch:KP_ARCH,extra:["Field Flip"],unverified:true},P:{arch:KP_ARCH,extra:["Field Flip"],unverified:true}
+};
+const MENTAL_ALL = ["Adrenaline","Best Friend","Clearheaded","Clutch Kicker","Defensive Rally","Fan Favorite","Field General","Headstrong","Instinct","Legion","Offensive Rally","Road Dog","Rollercoaster","Team Player","The Natural","Winning Time"];
+const MENTAL_SUGGEST = {QB:["Winning Time","The Natural","Field General","Headstrong","Adrenaline"],HB:["Winning Time","The Natural","Team Player","Adrenaline","Rollercoaster"],WR:["Winning Time","The Natural","Team Player","Best Friend","Adrenaline"],SAM:["Winning Time","The Natural","Team Player","Instinct","Adrenaline"],MIKE:["Winning Time","The Natural","Team Player","Instinct","Adrenaline"],WILL:["Winning Time","The Natural","Team Player","Instinct","Adrenaline"],CB:["Legion","Winning Time","The Natural","Team Player","Adrenaline"],K:["Clutch Kicker"],P:["Clutch Kicker"]};
+const MADDEN_ABILITY_NOTE = "Madden assigns its own abilities. CFB abilities don't carry over, and there's no verified CFB→Madden ability mapping. In Madden 26, only Superstar and X-Factor dev players can equip Superstar/X-Factor abilities. Use these as reference, e.g. when picking a Madden dev trait.";
+function physPool(pos,arch){
+  const d=PHYS_BY_POS[pos]||{};
+  if(arch&&d.arch&&d.arch[arch])return d.arch[arch].slice();
+  const set=new Set([...(d.pool||[]),...Object.values(d.arch||{}).flat(),...(d.extra||[])]);
+  return [...set].sort((a,b)=>String(a).localeCompare(String(b)));
+}
+function normAbilities(list){
+  if(!Array.isArray(list))return [];
+  return list.filter(a=>a&&a.name).map(a=>({name:String(a.name).slice(0,40),type:a.type==="Mental"?"Mental":"Physical",tier:ABILITY_TIERS.includes(a.tier)?a.tier:"",custom:!!a.custom}));
+}
 const CFB_DEV = ["Normal","Impact","Star","Elite"];
 const MADDEN_DEV = ["Normal","Star","Superstar","X-Factor"];
 const DEV_MAP = {Normal:"Normal",Impact:"Normal",Star:"Star",Elite:"Superstar"}; // estimate; override per player
@@ -252,13 +305,15 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 function defaultState(){
   const y=new Date().getFullYear()+1;
-  return {app:"draft-bridge",version:1,strength:50,targets:{},current:String(y),classes:{[String(y)]:{players:[]}},checks:{}};
+  return {app:"draft-bridge",version:2,strength:50,targets:{},current:String(y),classes:{[String(y)]:{players:[]}},checks:{}};
 }
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))||defaultState();}catch(e){S=defaultState();}
 if(!S.classes||!Object.keys(S.classes).length)S=defaultState();
 if(!S.classes[S.current])S.current=Object.keys(S.classes)[0];
 S.checks=S.checks||{};S.targets=S.targets||{};
+function migrate(){Object.values(S.classes).forEach(c=>{c.players=(c.players||[]).map(p=>Object.assign({ratings:{},override:{},archetype:""},p,{abilities:normAbilities(p.abilities)}));});S.version=2;}
+migrate();
 let curPos="QB", editing=null, cardIdx=0;
 
 function save(){localStorage.setItem(KEY,JSON.stringify(S));}
@@ -307,7 +362,7 @@ function renderBoard(){
       <div class="ovr">${esc(p.cfbOvr||"–")}<small>CFB</small></div>
       <div class="grow"><div class="nm">${esc(p.firstName)} ${esc(p.lastName)}</div>
       <div class="meta">${esc(p.college||"—")} · ${esc(p.classYr||"")} · ${ht(p)} ${p.weight?esc(p.weight)+" lb":""}</div>
-      <div class="meta">${rndTxt(p.round)} · Dev ${esc(p.devCfb||"?")}→${esc(p.devMadden||DEV_MAP[p.devCfb]||"?")} · Card ${done.c}/${done.t}</div></div>
+      ${(p.abilities||[]).length?`<div class="meta">${p.archetype?esc(p.archetype)+" · ":""}${abilBadges(p)}</div>`:""}<div class="meta">${rndTxt(p.round)} · Dev ${esc(p.devCfb||"?")}→${esc(p.devMadden||DEV_MAP[p.devCfb]||"?")} · Card ${done.c}/${done.t}</div></div>
       <div style="display:flex;flex-direction:column;gap:6px"><button data-edit="${p.id}" style="min-height:40px;padding:6px 12px">Edit</button><button data-card="${p.id}" style="min-height:40px;padding:6px 12px">Card</button></div>
     </div>`;}).join(""):`<div class="empty">No ${curPos} prospects yet.<br>Aim for your top ${t}.</div>`;
   const tot=ps.length, goal=POSITIONS.reduce((a,p)=>a+target(p),0);
@@ -318,7 +373,7 @@ function renderBoard(){
 
 /* ---------- editor ---------- */
 function openEditor(p){
-  editing=p?JSON.parse(JSON.stringify(p)):{id:uid(),pos:curPos,firstName:"",lastName:"",college:"",classYr:"JR",ft:6,inch:1,weight:"",cfbOvr:"",devCfb:"Normal",devMadden:"",round:"",age:"",appearance:"",ratings:{},override:{}};
+  editing=p?Object.assign({archetype:"",abilities:[]},JSON.parse(JSON.stringify(p))):{id:uid(),pos:curPos,firstName:"",lastName:"",college:"",classYr:"JR",ft:6,inch:1,weight:"",cfbOvr:"",devCfb:"Normal",devMadden:"",round:"",age:"",appearance:"",archetype:"",abilities:[],ratings:{},override:{}};
   editing._new=!p;
   renderEditor();
   $("#editor").classList.add("on");$("#editorBar").classList.add("on");
@@ -357,6 +412,7 @@ function renderEditor(){
   </div>
   <label class="f">Appearance notes (skin tone, hair, build, gear)</label>
   <input type="text" id="e_appearance" value="${esc(p.appearance)}" placeholder="e.g. dark skin, short locs, visor">
+  <div class="card" style="margin-top:14px" id="e_abil"></div>
   <div class="card" style="margin-top:14px">
     <div class="row"><div class="grow"><b>Ratings</b> <span class="info">CFB → Madden</span></div><span class="tag" id="e_strTag">Strength ${S.strength}</span></div>
     <input type="range" id="e_strength" min="0" max="100" step="5" value="${S.strength}" aria-label="Conversion strength">
@@ -365,11 +421,12 @@ function renderEditor(){
     <div id="e_ratings"></div>
   </div>`;
   renderEditorRatings();
+  renderAbilities();
   const bind=(id,k,num)=>{const el=$("#e_"+id);el.addEventListener("input",()=>{p[k]=num?(el.value===""?"":+el.value):el.value;if(["round","devCfb"].includes(k)){renderEditorRatings();if(k==="devCfb")$("#e_devMadden").options[0].text=`Auto (${DEV_MAP[p.devCfb]})`;}});el.addEventListener("change",()=>el.dispatchEvent(new Event("input")));};
   ["firstName","lastName","college","appearance","classYr","devCfb","devMadden"].forEach(k=>bind(k,k));
   ["ft","inch","weight","cfbOvr","age"].forEach(k=>bind(k,k,true));
   bind("round","round",true);
-  $("#e_pos").addEventListener("change",e=>{p.pos=e.target.value;renderEditorRatings();});
+  $("#e_pos").addEventListener("change",e=>{p.pos=e.target.value;const d=PHYS_BY_POS[p.pos]||{};if(p.archetype&&!(d.arch&&d.arch[p.archetype]))p.archetype="";renderEditorRatings();renderAbilities();});
   $("#e_strength").addEventListener("input",e=>{S.strength=+e.target.value;save();renderEditorRatings();const tg=document.getElementById("e_strTag");if(tg)tg.textContent="Strength "+S.strength;});
 }
 function renderEditorRatings(){
@@ -392,6 +449,50 @@ function renderEditorRatings(){
     renderEditorRatings();
   }));
 }
+let abUI={physQ:"",mentQ:"",allMental:false};
+function renderAbilities(){
+  const p=editing,d=PHYS_BY_POS[p.pos]||{},arches=Object.keys(d.arch||{});
+  const has=(n,t)=>p.abilities.some(a=>a.name===n&&a.type===t);
+  const chips=(list,t,q,sug)=>{const ql=q.trim().toLowerCase();const l=list.filter(n=>!ql||String(n).toLowerCase().includes(ql));
+    return l.length?l.map(n=>`<button type="button" class="${has(n,t)?"sel":""} ${sug&&sug.includes(n)?"sug":""}" data-abadd="${esc(n)}" data-abt="${t}">${has(n,t)?"✓ ":""}${esc(n)}</button>`).join(""):`<span class="info">No match. Use Other below.</span>`;};
+  const rows=t=>{const l=p.abilities.map((a,i)=>({a,i})).filter(x=>x.a.type===t);
+    return l.length?l.map(({a,i})=>`<div class="abrow"><div class="an">${esc(a.name)}${a.custom?"<small>other / custom</small>":""}</div><div class="tiers">${ABILITY_TIERS.map(tr=>`<button type="button" class="t-${tr} ${a.tier===tr?"on":""}" data-abi="${i}" data-tier="${tr}" aria-label="${tr}">${tr[0]}</button>`).join("")}</div><button type="button" class="x" data-abdel="${i}" aria-label="Remove">✕</button></div>`).join(""):`<div class="info" style="padding:4px 0">None added.</div>`;};
+  const sug=MENTAL_SUGGEST[p.pos]||[];
+  const mentList=(abUI.allMental||!sug.length)?MENTAL_ALL:sug;
+  $("#e_abil").innerHTML=`<div class="row"><div class="grow"><b>Abilities (CFB)</b> <span class="info">tap to add, then set tier B/S/G/P</span></div></div>
+  ${arches.length?`<label class="f">CFB archetype (filters physical abilities)</label><select id="e_arch"><option value="">All ${esc(p.pos)} abilities</option>${arches.map(a=>`<option ${a===p.archetype?"selected":""}>${esc(a)}</option>`).join("")}</select>`:""}
+  <div class="sec">Physical</div>
+  ${d.unverified?`<div class="info" style="font-size:11px">${esc(p.pos)} list comes from a pre-release source and may be incomplete.</div>`:""}
+  <input type="text" id="e_physQ" placeholder="Search physical…" value="${esc(abUI.physQ)}" autocomplete="off">
+  <div class="abch" id="e_physChips">${chips(physPool(p.pos,p.archetype),"Physical",abUI.physQ)}</div>
+  <div id="e_physRows">${rows("Physical")}</div>
+  <div class="sec">Mental</div>
+  <input type="text" id="e_mentQ" placeholder="Search mental…" value="${esc(abUI.mentQ)}" autocomplete="off">
+  <div class="abch" id="e_mentChips">${chips(mentList,"Mental",abUI.mentQ,sug)}</div>
+  ${sug.length?`<button type="button" class="ghost" id="e_mentAll" style="min-height:38px;font-size:13px;padding:4px 10px">${abUI.allMental?"Show suggested only":"Show all 16 mental"}</button>`:""}
+  <div id="e_mentRows">${rows("Mental")}</div>
+  <div class="sec">Other (not listed)</div>
+  <div class="row"><input type="text" id="e_abOther" placeholder="Ability name" class="grow" autocomplete="off"><select id="e_abOtherT" style="width:auto"><option>Physical</option><option>Mental</option></select></div>
+  <button type="button" id="e_abOtherAdd" style="width:100%;margin-top:6px">+ Add other ability</button>
+  <div class="note" style="margin-top:10px">${esc(MADDEN_ABILITY_NOTE)}</div>`;
+  const keepFocus=(id)=>{const el=$("#"+id);if(el){el.focus();const v=el.value;el.setSelectionRange(v.length,v.length);}};
+  $("#e_physQ").oninput=e=>{abUI.physQ=e.target.value;renderAbilities();keepFocus("e_physQ");};
+  $("#e_mentQ").oninput=e=>{abUI.mentQ=e.target.value;renderAbilities();keepFocus("e_mentQ");};
+  if($("#e_arch"))$("#e_arch").onchange=e=>{p.archetype=e.target.value;renderAbilities();};
+  if($("#e_mentAll"))$("#e_mentAll").onclick=()=>{abUI.allMental=!abUI.allMental;renderAbilities();};
+  $("#e_abil").querySelectorAll("[data-abadd]").forEach(b=>b.onclick=()=>{
+    const n=b.dataset.abadd,t=b.dataset.abt,i=p.abilities.findIndex(a=>a.name===n&&a.type===t);
+    if(i>=0)p.abilities.splice(i,1);else p.abilities.push({name:n,type:t,tier:"",custom:false});renderAbilities();});
+  $("#e_abil").querySelectorAll("[data-abi]").forEach(b=>b.onclick=()=>{const a=p.abilities[+b.dataset.abi];a.tier=a.tier===b.dataset.tier?"":b.dataset.tier;renderAbilities();});
+  $("#e_abil").querySelectorAll("[data-abdel]").forEach(b=>b.onclick=()=>{p.abilities.splice(+b.dataset.abdel,1);renderAbilities();});
+  $("#e_abOtherAdd").onclick=()=>{const n=$("#e_abOther").value.trim();if(!n){toast("Type an ability name");return;}const t=$("#e_abOtherT").value;
+    if(!p.abilities.some(a=>a.name.toLowerCase()===n.toLowerCase()&&a.type===t))p.abilities.push({name:n.slice(0,40),type:t,tier:"",custom:true});renderAbilities();};
+}
+function abilBadges(p,t){
+  const l=(p.abilities||[]).filter(a=>!t||a.type===t);
+  return l.map(a=>`<span class="tb ${a.tier||"none"}">${esc(a.name)}${a.tier?" "+a.tier[0]:""}</span>`).join("");
+}
+function abilText(p,t){return (p.abilities||[]).filter(a=>a.type===t).map(a=>a.name+(a.tier?` (${a.tier})`:"")).join("; ");}
 function saveEditor(){
   const p=editing;
   if(!p.firstName.trim()&&!p.lastName.trim()){toast("Add a name first");return;}
@@ -399,6 +500,7 @@ function saveEditor(){
   const keep=POS_RATINGS[p.pos]||[];
   Object.keys(p.ratings).forEach(k=>{if(!keep.includes(k)||p.ratings[k]==="")delete p.ratings[k];});
   Object.keys(p.override).forEach(k=>{if(!keep.includes(k))delete p.override[k];});
+  p.abilities=normAbilities(p.abilities);
   const isNew=p._new;delete p._new;
   const ps=players(),i=ps.findIndex(x=>x.id===p.id);
   if(i>=0)ps[i]=p;else ps.push(p);
@@ -435,6 +537,11 @@ function renderCard(){
   let sec="",html=`<div class="card pl"><div class="ovr">${esc(p.pos)}<small>${rndTxt(p.round)}</small></div><div class="grow"><div class="nm" style="font-size:20px">${esc(p.firstName)} ${esc(p.lastName)}</div><div class="meta">${esc(p.college||"")} · CFB ${esc(p.cfbOvr||"?")} OVR · player ${cardIdx+1} of ${list.length}</div></div></div>
   <div class="row info"><span class="grow">${n}/${f.length} fields entered</span><button class="ghost" id="ckReset" style="min-height:36px;padding:4px 10px;font-size:13px">Reset</button></div>
   <div class="prog"><i style="width:${f.length?n/f.length*100:0}%"></i></div>`;
+  if((p.abilities||[]).length||p.archetype){
+    html+=`<div class="abref"><div class="sec" style="margin-top:0">CFB abilities · reference only</div>${p.archetype?`<div class="info">Archetype: <b>${esc(p.archetype)}</b></div>`:""}
+    ${["Physical","Mental"].map(t=>{const b=abilBadges(p,t);return b?`<div class="info" style="margin-top:4px">${t}:</div><div>${b}</div>`:"";}).join("")}
+    <div class="info" style="font-size:11px;margin-top:6px">${esc(MADDEN_ABILITY_NOTE)}</div></div>`;
+  }
   f.forEach(x=>{
     if(x.sec!==sec){sec=x.sec;html+=`<div class="sec">${sec}</div>`;}
     html+=`<div class="fld ${c[x.k]?"ck":""}" data-k="${esc(x.k)}"><div class="bx">${c[x.k]?"✓":""}</div><div class="lb">${esc(x.lab)}${x.sub?`<small>${esc(x.sub)}</small>`:""}</div><div class="vl">${esc(x.v)}</div></div>`;
@@ -466,15 +573,15 @@ function download(name,text,type){
 function csvCell(v){v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
 function buildCsv(){
   const allR=RATING_ORDER;
-  const head=["Class","Pos","First","Last","School","ClassYr","Height","Weight","CFB_OVR","CFB_Dev","Madden_Dev","Round","Age","Appearance",...allR.map(a=>"CFB_"+a),...allR.map(a=>"MAD_"+a)];
-  const rows=cardOrderList().map(p=>[S.current,p.pos,p.firstName,p.lastName,p.college,p.classYr,ht(p),p.weight,p.cfbOvr,p.devCfb,p.devMadden||DEV_MAP[p.devCfb],p.round==8?"UDFA":p.round,p.age,p.appearance,...allR.map(a=>p.ratings[a]??""),...allR.map(a=>p.ratings[a]!=null||p.override?.[a]!=null?(maddenVal(p,a).v??""):"")]);
+  const head=["Class","Pos","First","Last","School","ClassYr","Height","Weight","CFB_OVR","CFB_Dev","Madden_Dev","Round","Age","Appearance","CFB_Archetype","CFB_Physical_Abilities","CFB_Mental_Abilities",...allR.map(a=>"CFB_"+a),...allR.map(a=>"MAD_"+a)];
+  const rows=cardOrderList().map(p=>[S.current,p.pos,p.firstName,p.lastName,p.college,p.classYr,ht(p),p.weight,p.cfbOvr,p.devCfb,p.devMadden||DEV_MAP[p.devCfb],p.round==8?"UDFA":p.round,p.age,p.appearance,p.archetype||"",abilText(p,"Physical"),abilText(p,"Mental"),...allR.map(a=>p.ratings[a]??""),...allR.map(a=>p.ratings[a]!=null||p.override?.[a]!=null?(maddenVal(p,a).v??""):"")]);
   return [head,...rows].map(r=>r.map(csvCell).join(",")).join("\n");
 }
 function importJson(txt){
   let d;try{d=JSON.parse(txt);}catch(e){toast("That's not valid JSON");return false;}
   if(!d||d.app!=="draft-bridge"||!d.classes){toast("Not a Draft Bridge backup");return false;}
   if(!confirm("Replace everything on this phone with this backup?"))return false;
-  S=Object.assign(defaultState(),d);S.checks=S.checks||{};S.targets=S.targets||{};
+  S=Object.assign(defaultState(),d);S.checks=S.checks||{};S.targets=S.targets||{};migrate();
   if(!S.classes[S.current])S.current=Object.keys(S.classes)[0];
   save();renderAll();toast("Backup restored ✓");return true;
 }
