@@ -90,6 +90,14 @@ ol.how li{margin:6px 0}
 .abrow .x{min-width:40px;min-height:40px;padding:0;color:var(--bad)}
 .tb{display:inline-block;font-size:11px;font-weight:800;padding:1px 6px;border-radius:6px;margin:2px 3px 0 0;color:#111}
 .tb.Bronze{background:#cd7f32}.tb.Silver{background:#c0c7d2}.tb.Gold{background:#ffd23f}.tb.Platinum{background:#9fe8ff}.tb.none{background:var(--panel2);color:var(--mut)}
+.fate{display:inline-block;font-size:12px;font-weight:800;padding:2px 8px;border-radius:8px;margin-left:4px}
+.fate.star{background:#3a2f07;color:#ffd23f}.fate.bust{background:#3a0f14;color:#ff7a86}.fate.steal{background:#0b2f3a;color:#7fe3ff}
+.fatech{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.fatech button{min-height:48px;padding:4px;font-size:13px}
+.fatech button.on{border-color:var(--acc);background:#173a2a;color:var(--acc)}
+.bd{font-size:12px;color:var(--mut);background:var(--panel2);border-radius:10px;padding:8px 10px;margin-top:8px}
+.bd div{padding:2px 0}.bd b{color:var(--txt)}
+.dl{font-size:10px;color:var(--acc2);text-align:center;margin-top:2px}
 .abref{background:var(--panel);border:1px dashed var(--blue);border-radius:12px;padding:10px 12px;margin:8px 0}
 </style>
 </head>
@@ -133,6 +141,11 @@ ol.how li{margin:6px 0}
       <input type="range" id="strength" min="0" max="100" step="5">
       <div class="row info"><span>Light</span><span class="grow" style="text-align:center"><b id="strengthVal"></b></span><span>Heavy</span></div>
       <div class="note">Community estimate, not EA's formula. EA hasn't published how CFB ratings translate to Madden. Adjust it to taste, or tap any converted number to override it.</div>
+    </div>
+    <div class="card">
+      <div class="sec" style="margin-top:0">Fate presets (house rules)</div>
+      <div class="info">How strong ⭐ Star, 💥 Bust, and 💎 Steal are. Points apply to the player's key position ratings and AWR.</div>
+      <div class="tgt" id="fateCfg" style="margin-top:8px"></div>
     </div>
     <div class="card">
       <div class="sec" style="margin-top:0">Top-N per position</div>
@@ -291,6 +304,33 @@ function normAbilities(list){
   if(!Array.isArray(list))return [];
   return list.filter(a=>a&&a.name).map(a=>({name:String(a.name).slice(0,40),type:a.type==="Mental"?"Mental":"Physical",tier:ABILITY_TIERS.includes(a.tier)?a.tier:"",custom:!!a.custom}));
 }
+/* ---- ADJUSTERS: house rules, NOT EA's formula. All off by default. ----
+   Each adjuster is capped at ±3 per rating; program+history+scheme combined are capped at ±5.
+   Fate presets are applied on top (magnitudes editable in Data tab, 0–5). Manual overrides always win. */
+const ADJ_CAP_EACH = 3, ADJ_CAP_TOTAL = 5;
+const PROGRAM = { // applied to mental (AWR/PRC) and skill ratings; athletic untouched
+  "Power 4":{mental:2,skill:1}, "Group of 5":{mental:-1,skill:-1}, "FCS":{mental:-3,skill:-2}
+};
+const HISTORY = { "Blue blood":{mental:2,skill:1}, "Solid":{mental:1,skill:0}, "Rebuilding":{mental:0,skill:0} };
+const SCHEMES = { // per-rating nudges; only ratings the player has are affected
+  "Air Raid":{side:"O",r:{SAC:-2,MAC:-2,SRR:-2,MRR:-1,CTH:-1,RBK:1,BTK:1}},
+  "Spread":{side:"O",r:{SAC:-1,RUN:-1,SRR:-1,BCV:-1,PBK:1,PAC:1}},
+  "Pro-Style":{side:"O",r:{AWR:2,PAC:1,PBK:1,RBK:1,MRR:1}},
+  "West Coast":{side:"O",r:{SAC:-2,SRR:-1,CTH:-1,AWR:1}},
+  "Option / Triple":{side:"O",r:{SAC:2,MAC:2,DAC:2,BCV:-2,CAR:-1,RBF:-1,LBK:-1}},
+  "Run-Heavy / Power":{side:"O",r:{BTK:-2,TRK:-2,RBK:-1,RBP:-1,PBK:2,PBF:1,CTH:1,SRR:1}},
+  "Blitz-heavy 3-4":{side:"D",r:{PMV:-2,FMV:-2,PUR:-1,BSH:1,MCV:1,ZCV:1}},
+  "Cover-2 / Zone":{side:"D",r:{ZCV:-2,PRC:-1,MCV:2,PRS:2}},
+  "Man / Press":{side:"D",r:{MCV:-2,PRS:-2,ZCV:2,PRC:1}}
+};
+const KEY_RATINGS = {
+  QB:["THP","SAC","MAC","DAC","TUP"],HB:["BCV","BTK","CAR","JKM"],FB:["RBK","LBK","IBK"],WR:["CTH","SRR","MRR","DRR","RLS"],TE:["CTH","SRR","RBK"],
+  LT:["PBK","PBP","PBF","RBK","RBP","RBF"],LG:["PBK","PBP","PBF","RBK","RBP","RBF"],C:["PBK","PBP","PBF","RBK","RBP","RBF"],RG:["PBK","PBP","PBF","RBK","RBP","RBF"],RT:["PBK","PBP","PBF","RBK","RBP","RBF"],
+  LEDG:["PMV","FMV","BSH"],REDG:["PMV","FMV","BSH"],DT:["PMV","FMV","BSH"],SAM:["TAK","PUR","PRC"],MIKE:["TAK","PUR","PRC"],WILL:["TAK","PUR","PRC"],
+  CB:["MCV","ZCV","PRS"],FS:["ZCV","MCV","TAK"],SS:["ZCV","MCV","TAK"],K:["KPW","KAC"],P:["KPW","KAC"]
+};
+const FATE_DEFAULTS = {starKey:4,starAwr:3,bustKey:4,bustAwr:4,stealBoost:2,stealRounds:2,stealMinRound:4};
+const FATES = {star:{icon:"⭐",label:"Star"},bust:{icon:"💥",label:"Bust"},steal:{icon:"💎",label:"Steal"}};
 const CFB_DEV = ["Normal","Impact","Star","Elite"];
 const MADDEN_DEV = ["Normal","Star","Superstar","X-Factor"];
 const DEV_MAP = {Normal:"Normal",Impact:"Normal",Star:"Star",Elite:"Superstar"}; // estimate; override per player
@@ -305,14 +345,15 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 function defaultState(){
   const y=new Date().getFullYear()+1;
-  return {app:"draft-bridge",version:2,strength:50,targets:{},current:String(y),classes:{[String(y)]:{players:[]}},checks:{}};
+  return {app:"draft-bridge",version:3,fateCfg:Object.assign({},FATE_DEFAULTS),strength:50,targets:{},current:String(y),classes:{[String(y)]:{players:[]}},checks:{}};
 }
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))||defaultState();}catch(e){S=defaultState();}
 if(!S.classes||!Object.keys(S.classes).length)S=defaultState();
 if(!S.classes[S.current])S.current=Object.keys(S.classes)[0];
 S.checks=S.checks||{};S.targets=S.targets||{};
-function migrate(){Object.values(S.classes).forEach(c=>{c.players=(c.players||[]).map(p=>Object.assign({ratings:{},override:{},archetype:""},p,{abilities:normAbilities(p.abilities)}));});S.version=2;}
+function migrate(){Object.values(S.classes).forEach(c=>{c.players=(c.players||[]).map(p=>Object.assign({ratings:{},override:{},archetype:""},p,{abilities:normAbilities(p.abilities),adj:normAdj(p.adj),fate:FATES[p.fate]?p.fate:""}));});S.fateCfg=Object.assign({},FATE_DEFAULTS,S.fateCfg||{});S.version=3;}
+function normAdj(a){a=a||{};return {program:PROGRAM[a.program]?a.program:"",history:HISTORY[a.history]?a.history:"",scheme:SCHEMES[a.scheme]?a.scheme:""};}
 migrate();
 let curPos="QB", editing=null, cardIdx=0;
 
@@ -331,9 +372,62 @@ function convert(abbr,v,round){
   if(v<f && !ATHLETIC.includes(abbr)) m=v+rb;
   return clamp(Math.round(m),CONV.min,CONV.max);
 }
+function adjParts(p,abbr){
+  const k=kind(abbr),a=normAdj(p.adj),parts=[];
+  const lvl=(tbl,key,src)=>{const t=tbl[key];if(!t)return;const d=k==="mental"?t.mental:k==="skill"?t.skill:0;if(d)parts.push({src,d:clamp(d,-ADJ_CAP_EACH,ADJ_CAP_EACH)});};
+  lvl(PROGRAM,a.program,"Program");lvl(HISTORY,a.history,"History");
+  const sc=SCHEMES[a.scheme];if(sc&&sc.r[abbr])parts.push({src:"Scheme",d:clamp(sc.r[abbr],-ADJ_CAP_EACH,ADJ_CAP_EACH)});
+  const raw=parts.reduce((x,y)=>x+y.d,0);
+  return {parts,raw,total:clamp(raw,-ADJ_CAP_TOTAL,ADJ_CAP_TOTAL)};
+}
+function fateDelta(p,abbr){
+  const F=S.fateCfg||FATE_DEFAULTS,key=(KEY_RATINGS[p.pos]||[]).includes(abbr),awr=abbr==="AWR";
+  if(p.fate==="star")return key?F.starKey:awr?F.starAwr:0;
+  if(p.fate==="bust")return key?-F.bustKey:awr?-F.bustAwr:0;
+  if(p.fate==="steal")return (key||awr)?F.stealBoost:0;
+  return 0;
+}
+function maddenDetail(p,abbr){
+  const base=convert(abbr,p.ratings?.[abbr],p.round);
+  if(base==null)return {base:null,v:null,adj:0,fate:0};
+  const ap=adjParts(p,abbr),fd=fateDelta(p,abbr);
+  return {base,adj:ap.total,raw:ap.raw,parts:ap.parts,fate:fd,v:clamp(base+ap.total+fd,CONV.min,CONV.max)};
+}
 function maddenVal(p,abbr){
   if(p.override&&p.override[abbr]!=null&&p.override[abbr]!=="")return {v:+p.override[abbr],ov:true};
-  return {v:convert(abbr,p.ratings?.[abbr],p.round),ov:false};
+  return {v:maddenDetail(p,abbr).v,ov:false};
+}
+// Draft round shown in Madden (Steal pushes later; talent/ratings still use the entered round)
+function draftRound(p){
+  const r=+p.round||0;if(p.fate!=="steal"||!r)return r||"";
+  const F=S.fateCfg||FATE_DEFAULTS;if(r>=8)return 8;
+  return clamp(Math.max(r+F.stealRounds,F.stealMinRound),1,7);
+}
+function fateDev(p){
+  if(p.fate==="star")return (p.devCfb==="Star"||p.devCfb==="Elite")?"Superstar":"Star";
+  if(p.fate==="bust")return "Normal";
+  if(p.fate==="steal")return "Star";
+  return "";
+}
+function maddenDev(p){return p.devMadden||fateDev(p)||DEV_MAP[p.devCfb]||"";}
+function fateBadge(p){const f=FATES[p.fate];return f?`<span class="fate ${p.fate}">${f.icon} ${f.label}</span>`:"";}
+function sgn(n){return (n>0?"+":n<0?"−":"±")+Math.abs(n);}
+function breakdownLines(p){
+  const a=normAdj(p.adj),L=[],F=S.fateCfg||FATE_DEFAULTS;
+  const rb=CONV.roundBonus[p.round]??0;
+  L.push(`<b>Base</b>: strength ${S.strength}, ${rndTxt(p.round)} (${sgn(rb)} skill/AWR/PRC)`);
+  const lvl=(tbl,key,name)=>{const t=tbl[key];if(t)L.push(`<b>${name}</b>: ${esc(key)} ${sgn(t.mental)} AWR/PRC, ${sgn(t.skill)} skill`);};
+  lvl(PROGRAM,a.program,"Program");lvl(HISTORY,a.history,"History");
+  const sc=SCHEMES[a.scheme];
+  if(sc){const rel=Object.entries(sc.r).filter(([k])=>(POS_RATINGS[p.pos]||[]).includes(k));
+    L.push(`<b>Scheme</b>: ${esc(a.scheme)} ${rel.length?rel.map(([k,d])=>k+" "+sgn(d)).join(", "):"(no effect at "+esc(p.pos)+")"}`);}
+  if(a.program||a.history||a.scheme)L.push(`Adjusters capped at ±${ADJ_CAP_EACH} each and ±${ADJ_CAP_TOTAL} combined per rating`);
+  const key=(KEY_RATINGS[p.pos]||[]).join(", ");
+  if(p.fate==="star")L.push(`<b>Fate ⭐ Star</b>: +${F.starKey} key (${key}), +${F.starAwr} AWR; dev → ${fateDev(p)} (suggested)`);
+  if(p.fate==="bust")L.push(`<b>Fate 💥 Bust</b>: −${F.bustKey} key (${key}), −${F.bustAwr} AWR; athletic ratings kept (🚩 looks great athletically); dev → Normal`);
+  if(p.fate==="steal")L.push(`<b>Fate 💎 Steal</b>: +${F.stealBoost} key/AWR; ratings use ${rndTxt(p.round)} talent, but draft him at ${p.round?rndTxt(draftRound(p)):"(set a round)"}; dev → Star`);
+  L.push(`Manual overrides (orange) win over everything`);
+  return L.map(x=>`<div>${x}</div>`).join("");
 }
 const kind=a=>ATHLETIC.includes(a)?"athletic":MENTAL.includes(a)?"mental":"skill";
 const ht=p=>p.ft?`${p.ft}'${p.inch??0}"`:"";
@@ -352,7 +446,7 @@ function renderBoard(){
     const cls=n>t?"over":n>=t?"full":"";
     return `<button class="chip ${p===curPos?"on":""} ${cls}" data-pos="${p}">${p}<small>${n}/${t}</small></button>`;
   }).join("");
-  const list=ps.filter(x=>x.pos===curPos).sort((a,b)=>(a.round||9)-(b.round||9)||(b.cfbOvr||0)-(a.cfbOvr||0));
+  const list=ps.filter(x=>x.pos===curPos).sort((a,b)=>(draftRound(a)||9)-(draftRound(b)||9)||(b.cfbOvr||0)-(a.cfbOvr||0));
   const t=target(curPos);
   $("#posTitle").textContent=curPos;
   $("#posCount").textContent=`${list.length}/${t} slots`+(list.length>t?" (over target)":"");
@@ -360,9 +454,9 @@ function renderBoard(){
     const done=cardProgress(p);
     return `<div class="card pl" data-id="${p.id}">
       <div class="ovr">${esc(p.cfbOvr||"–")}<small>CFB</small></div>
-      <div class="grow"><div class="nm">${esc(p.firstName)} ${esc(p.lastName)}</div>
+      <div class="grow"><div class="nm">${esc(p.firstName)} ${esc(p.lastName)}${fateBadge(p)}</div>
       <div class="meta">${esc(p.college||"—")} · ${esc(p.classYr||"")} · ${ht(p)} ${p.weight?esc(p.weight)+" lb":""}</div>
-      ${(p.abilities||[]).length?`<div class="meta">${p.archetype?esc(p.archetype)+" · ":""}${abilBadges(p)}</div>`:""}<div class="meta">${rndTxt(p.round)} · Dev ${esc(p.devCfb||"?")}→${esc(p.devMadden||DEV_MAP[p.devCfb]||"?")} · Card ${done.c}/${done.t}</div></div>
+      ${(p.abilities||[]).length?`<div class="meta">${p.archetype?esc(p.archetype)+" · ":""}${abilBadges(p)}</div>`:""}<div class="meta">${p.fate==="steal"&&p.round?rndTxt(draftRound(p))+" (talent "+rndTxt(p.round)+")":rndTxt(p.round)} · Dev ${esc(p.devCfb||"?")}→${esc(maddenDev(p)||"?")} · Card ${done.c}/${done.t}</div></div>
       <div style="display:flex;flex-direction:column;gap:6px"><button data-edit="${p.id}" style="min-height:40px;padding:6px 12px">Edit</button><button data-card="${p.id}" style="min-height:40px;padding:6px 12px">Card</button></div>
     </div>`;}).join(""):`<div class="empty">No ${curPos} prospects yet.<br>Aim for your top ${t}.</div>`;
   const tot=ps.length, goal=POSITIONS.reduce((a,p)=>a+target(p),0);
@@ -373,7 +467,7 @@ function renderBoard(){
 
 /* ---------- editor ---------- */
 function openEditor(p){
-  editing=p?Object.assign({archetype:"",abilities:[]},JSON.parse(JSON.stringify(p))):{id:uid(),pos:curPos,firstName:"",lastName:"",college:"",classYr:"JR",ft:6,inch:1,weight:"",cfbOvr:"",devCfb:"Normal",devMadden:"",round:"",age:"",appearance:"",archetype:"",abilities:[],ratings:{},override:{}};
+  editing=p?Object.assign({archetype:"",abilities:[],adj:{program:"",history:"",scheme:""},fate:""},JSON.parse(JSON.stringify(p))):{id:uid(),pos:curPos,firstName:"",lastName:"",college:"",classYr:"JR",ft:6,inch:1,weight:"",cfbOvr:"",devCfb:"Normal",devMadden:"",round:"",age:"",appearance:"",archetype:"",abilities:[],adj:{program:"",history:"",scheme:""},fate:"",ratings:{},override:{}};
   editing._new=!p;
   renderEditor();
   $("#editor").classList.add("on");$("#editorBar").classList.add("on");
@@ -407,22 +501,40 @@ function renderEditor(){
   </div>
   <div class="grid3">
     <div><label class="f">CFB dev</label><select id="e_devCfb">${opt(CFB_DEV,p.devCfb)}</select></div>
-    <div><label class="f">Madden dev</label><select id="e_devMadden"><option value="">Auto (${esc(DEV_MAP[p.devCfb]||"")})</option>${MADDEN_DEV.map(d=>`<option ${d===p.devMadden?"selected":""}>${d}</option>`).join("")}</select></div>
+    <div><label class="f">Madden dev</label><select id="e_devMadden"><option value="">Auto (${esc(fateDev(p)||DEV_MAP[p.devCfb]||"")})</option>${MADDEN_DEV.map(d=>`<option ${d===p.devMadden?"selected":""}>${d}</option>`).join("")}</select></div>
     <div><label class="f">Proj. round</label><select id="e_round">${rounds.map(([v,l])=>`<option value="${v}" ${String(v)===String(p.round)?"selected":""}>${l}</option>`).join("")}</select></div>
   </div>
   <label class="f">Appearance notes (skin tone, hair, build, gear)</label>
   <input type="text" id="e_appearance" value="${esc(p.appearance)}" placeholder="e.g. dark skin, short locs, visor">
   <div class="card" style="margin-top:14px" id="e_abil"></div>
   <div class="card" style="margin-top:14px">
+    <div class="row"><div class="grow"><b>Adjusters</b> <span class="info">optional · all off by default</span></div></div>
+    <div class="note" style="margin:6px 0">House rules, not EA's formula. Each one is shown line by line in the breakdown under Ratings.</div>
+    <div class="grid2">
+      <div><label class="f">Program quality</label><select id="e_adjProgram"><option value="">Off</option>${Object.keys(PROGRAM).map(k=>`<option ${k===p.adj.program?"selected":""}>${k}</option>`).join("")}</select></div>
+      <div><label class="f">Program history</label><select id="e_adjHistory"><option value="">Off</option>${Object.keys(HISTORY).map(k=>`<option ${k===p.adj.history?"selected":""}>${k}</option>`).join("")}</select></div>
+    </div>
+    <label class="f">Playing style (scheme)</label>
+    <select id="e_adjScheme"><option value="">Off</option><optgroup label="Offense">${Object.keys(SCHEMES).filter(k=>SCHEMES[k].side==="O").map(k=>`<option ${k===p.adj.scheme?"selected":""}>${k}</option>`).join("")}</optgroup><optgroup label="Defense">${Object.keys(SCHEMES).filter(k=>SCHEMES[k].side==="D").map(k=>`<option ${k===p.adj.scheme?"selected":""}>${k}</option>`).join("")}</optgroup></select>
+    <label class="f">Fate preset (pick one or none)</label>
+    <div class="fatech" id="e_fate">${[["","None"],["star","⭐ Star"],["bust","💥 Bust"],["steal","💎 Steal"]].map(([v,l])=>`<button type="button" data-fate="${v}" class="${(p.fate||"")===v?"on":""}">${l}</button>`).join("")}</div>
+  </div>
+  <div class="card" style="margin-top:14px">
     <div class="row"><div class="grow"><b>Ratings</b> <span class="info">CFB → Madden</span></div><span class="tag" id="e_strTag">Strength ${S.strength}</span></div>
     <input type="range" id="e_strength" min="0" max="100" step="5" value="${S.strength}" aria-label="Conversion strength">
     <div class="note" style="margin:4px 0 8px">Community estimate, not EA's formula. Tap a green number to override it. Orange means overridden.</div>
     <div class="rt info" style="border:0"><span>Rating</span><span style="text-align:center">CFB</span><span style="text-align:center">Madden</span></div>
     <div id="e_ratings"></div>
+    <div class="bd" id="e_breakdown"></div>
   </div>`;
   renderEditorRatings();
   renderAbilities();
-  const bind=(id,k,num)=>{const el=$("#e_"+id);el.addEventListener("input",()=>{p[k]=num?(el.value===""?"":+el.value):el.value;if(["round","devCfb"].includes(k)){renderEditorRatings();if(k==="devCfb")$("#e_devMadden").options[0].text=`Auto (${DEV_MAP[p.devCfb]})`;}});el.addEventListener("change",()=>el.dispatchEvent(new Event("input")));};
+  const adjSel=(id,k)=>$("#"+id).addEventListener("change",e=>{p.adj[k]=e.target.value;renderEditorRatings();});
+  adjSel("e_adjProgram","program");adjSel("e_adjHistory","history");adjSel("e_adjScheme","scheme");
+  $("#e_fate").addEventListener("click",e=>{const b=e.target.closest("[data-fate]");if(!b)return;p.fate=b.dataset.fate;
+    $("#e_fate").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+    const o=$("#e_devMadden").options[0];o.text=`Auto (${fateDev(p)||DEV_MAP[p.devCfb]})`;renderEditorRatings();});
+  const bind=(id,k,num)=>{const el=$("#e_"+id);el.addEventListener("input",()=>{p[k]=num?(el.value===""?"":+el.value):el.value;if(["round","devCfb"].includes(k)){renderEditorRatings();if(k==="devCfb")$("#e_devMadden").options[0].text=`Auto (${fateDev(p)||DEV_MAP[p.devCfb]})`;}});el.addEventListener("change",()=>el.dispatchEvent(new Event("input")));};
   ["firstName","lastName","college","appearance","classYr","devCfb","devMadden"].forEach(k=>bind(k,k));
   ["ft","inch","weight","cfbOvr","age"].forEach(k=>bind(k,k,true));
   bind("round","round",true);
@@ -431,15 +543,17 @@ function renderEditor(){
 }
 function renderEditorRatings(){
   const p=editing;
+  const dlab=a=>{const d=maddenDetail(p,a);if(d.base==null)return "";const t=d.adj+d.fate;return t?`base ${d.base} ${sgn(t)}`:"";};
   $("#e_ratings").innerHTML=(POS_RATINGS[p.pos]||[]).map(a=>{
     const m=maddenVal(p,a);
     return `<div class="rt"><div><span class="ab">${a}</span><span class="tag">${kind(a)}</span><div class="fn">${RATINGS[a]}</div></div>
       <input type="number" inputmode="numeric" min="0" max="99" data-r="${a}" value="${esc(p.ratings[a]??"")}" aria-label="CFB ${a}">
-      <div class="mv ${m.ov?"ov":""}" data-ov="${a}" role="button" aria-label="Madden ${a}">${m.v??"–"}</div></div>`;
+      <div><div class="mv ${m.ov?"ov":""}" data-ov="${a}" role="button" aria-label="Madden ${a}">${m.v??"–"}</div><div class="dl" data-dl="${a}">${m.ov?"override":dlab(a)}</div></div></div>`;
   }).join("");
+  $("#e_breakdown").innerHTML=breakdownLines(p);
   $("#e_ratings").querySelectorAll("input[data-r]").forEach(el=>el.addEventListener("input",()=>{
     const a=el.dataset.r;p.ratings[a]=el.value===""?"":clamp(+el.value,0,99);
-    const m=maddenVal(p,a),box=$(`#e_ratings [data-ov="${a}"]`);box.textContent=m.v??"–";
+    const m=maddenVal(p,a),box=$(`#e_ratings [data-ov="${a}"]`);box.textContent=m.v??"–";$(`#e_ratings [data-dl="${a}"]`).textContent=m.ov?"override":dlab(a);
   }));
   $("#e_ratings").querySelectorAll("[data-ov]").forEach(el=>el.addEventListener("click",()=>{
     const a=el.dataset.ov, cur=maddenVal(p,a);
@@ -517,15 +631,15 @@ function cardFields(p){
       const rs=(POS_RATINGS[p.pos]||[]).slice().sort((a,b)=>RATING_ORDER.indexOf(a)-RATING_ORDER.indexOf(b));
       rs.forEach(a=>{const m=maddenVal(p,a);if(m.v!=null)out.push({k:"r:"+a,lab:RATINGS[a],sub:a+(m.ov?" · override":" · est. from CFB "+p.ratings[a]),v:m.v,sec:"Ratings"});});
     }else{
-      let v={firstName:p.firstName,lastName:p.lastName,position:p.pos,college:p.college,age:p.age,height:ht(p),weight:p.weight?p.weight+" lb":"",devMadden:p.devMadden||DEV_MAP[p.devCfb],appearance:p.appearance}[k];
+      let v={firstName:p.firstName,lastName:p.lastName,position:p.pos,college:p.college,age:p.age,height:ht(p),weight:p.weight?p.weight+" lb":"",devMadden:maddenDev(p),appearance:p.appearance}[k];
       if(v===""||v==null){if(k==="age"||k==="appearance")return; v="—";}
-      out.push({k,lab:BIO_LABELS[k],sub:k==="devMadden"?`from CFB ${p.devCfb||"?"}${p.devMadden?"":" (est.)"} · editable on prospects? confirm`:"",v,sec:"Bio"});
+      out.push({k,lab:BIO_LABELS[k],sub:k==="devMadden"?`from CFB ${p.devCfb||"?"}${p.devMadden?"":p.fate?" (fate suggestion)":" (est.)"} · editable on prospects? confirm`:"",v,sec:"Bio"});
     }
   });
   return out;
 }
 function cardProgress(p){const f=cardFields(p),c=S.checks[p.id]||{};return {t:f.length,c:f.filter(x=>c[x.k]).length};}
-function cardOrderList(){return players().slice().sort((a,b)=>POSITIONS.indexOf(a.pos)-POSITIONS.indexOf(b.pos)||(a.round||9)-(b.round||9)||(b.cfbOvr||0)-(a.cfbOvr||0));}
+function cardOrderList(){return players().slice().sort((a,b)=>POSITIONS.indexOf(a.pos)-POSITIONS.indexOf(b.pos)||(draftRound(a)||9)-(draftRound(b)||9)||(b.cfbOvr||0)-(a.cfbOvr||0));}
 function renderCard(){
   const list=cardOrderList();
   if(!list.length){$("#cardSel").innerHTML="";$("#cardBody").innerHTML=`<div class="empty">Add prospects on the Board first.</div>`;return;}
@@ -534,9 +648,10 @@ function renderCard(){
   $("#cardSel").innerHTML=list.map((p,i)=>{const d=cardProgress(p);return `<option value="${i}" ${i===cardIdx?"selected":""}>${d.c===d.t?"✅ ":""}${esc(p.pos)} · ${esc(p.firstName)} ${esc(p.lastName)} (${d.c}/${d.t})</option>`;}).join("");
   const p=list[cardIdx],f=cardFields(p),c=S.checks[p.id]=S.checks[p.id]||{};
   const n=f.filter(x=>c[x.k]).length;
-  let sec="",html=`<div class="card pl"><div class="ovr">${esc(p.pos)}<small>${rndTxt(p.round)}</small></div><div class="grow"><div class="nm" style="font-size:20px">${esc(p.firstName)} ${esc(p.lastName)}</div><div class="meta">${esc(p.college||"")} · CFB ${esc(p.cfbOvr||"?")} OVR · player ${cardIdx+1} of ${list.length}</div></div></div>
+  let sec="",html=`<div class="card pl"><div class="ovr">${esc(p.pos)}<small>${rndTxt(draftRound(p))}</small></div><div class="grow"><div class="nm" style="font-size:20px">${esc(p.firstName)} ${esc(p.lastName)}${fateBadge(p)}</div><div class="meta">${esc(p.college||"")} · CFB ${esc(p.cfbOvr||"?")} OVR · player ${cardIdx+1} of ${list.length}</div></div></div>
   <div class="row info"><span class="grow">${n}/${f.length} fields entered</span><button class="ghost" id="ckReset" style="min-height:36px;padding:4px 10px;font-size:13px">Reset</button></div>
   <div class="prog"><i style="width:${f.length?n/f.length*100:0}%"></i></div>`;
+  {const a=normAdj(p.adj);if(a.program||a.history||a.scheme||p.fate)html+=`<div class="abref" style="border-color:var(--acc2)"><div class="sec" style="margin-top:0;color:var(--acc2)">Adjusters · house rules, not EA formula</div><div class="bd" style="margin:0;background:none;padding:0">${breakdownLines(p)}</div>${p.fate==="steal"&&p.round?`<div class="info" style="margin-top:4px">💎 Put him in Madden's draft around <b>${rndTxt(draftRound(p))}</b>.</div>`:""}</div>`;}
   if((p.abilities||[]).length||p.archetype){
     html+=`<div class="abref"><div class="sec" style="margin-top:0">CFB abilities · reference only</div>${p.archetype?`<div class="info">Archetype: <b>${esc(p.archetype)}</b></div>`:""}
     ${["Physical","Mental"].map(t=>{const b=abilBadges(p,t);return b?`<div class="info" style="margin-top:4px">${t}:</div><div>${b}</div>`:"";}).join("")}
@@ -563,7 +678,9 @@ function renderCard(){
 }
 
 /* ---------- data ---------- */
+const FATE_CFG_UI=[["starKey","⭐ key +",0,5],["starAwr","⭐ AWR +",0,5],["bustKey","💥 key −",0,5],["bustAwr","💥 AWR −",0,5],["stealBoost","💎 key/AWR +",0,5],["stealRounds","💎 rounds later",1,4],["stealMinRound","💎 earliest Rd",2,7]];
 function renderData(){
+  $("#fateCfg").innerHTML=FATE_CFG_UI.map(([k,l])=>`<div><b style="font-size:12px">${l}</b><div class="stp" style="justify-content:center"><button data-fc="${k}" data-d="-1">−</button><span style="min-width:16px">${S.fateCfg[k]}</span><button data-fc="${k}" data-d="1">+</button></div></div>`).join("");
   $("#strength").value=S.strength;$("#strengthVal").textContent=S.strength;
   $("#targets").innerHTML=POSITIONS.map(p=>`<div><b>${p}</b><div class="stp" style="justify-content:center"><button data-t="${p}" data-d="-1">−</button><span style="min-width:16px">${target(p)}</span><button data-t="${p}" data-d="1">+</button></div></div>`).join("");
 }
@@ -573,8 +690,8 @@ function download(name,text,type){
 function csvCell(v){v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
 function buildCsv(){
   const allR=RATING_ORDER;
-  const head=["Class","Pos","First","Last","School","ClassYr","Height","Weight","CFB_OVR","CFB_Dev","Madden_Dev","Round","Age","Appearance","CFB_Archetype","CFB_Physical_Abilities","CFB_Mental_Abilities",...allR.map(a=>"CFB_"+a),...allR.map(a=>"MAD_"+a)];
-  const rows=cardOrderList().map(p=>[S.current,p.pos,p.firstName,p.lastName,p.college,p.classYr,ht(p),p.weight,p.cfbOvr,p.devCfb,p.devMadden||DEV_MAP[p.devCfb],p.round==8?"UDFA":p.round,p.age,p.appearance,p.archetype||"",abilText(p,"Physical"),abilText(p,"Mental"),...allR.map(a=>p.ratings[a]??""),...allR.map(a=>p.ratings[a]!=null||p.override?.[a]!=null?(maddenVal(p,a).v??""):"")]);
+  const head=["Class","Pos","First","Last","School","ClassYr","Height","Weight","CFB_OVR","CFB_Dev","Madden_Dev","Round","Madden_Draft_Round","Fate","Adj_Program","Adj_History","Adj_Scheme","Age","Appearance","CFB_Archetype","CFB_Physical_Abilities","CFB_Mental_Abilities",...allR.map(a=>"CFB_"+a),...allR.map(a=>"MAD_"+a)];
+  const rows=cardOrderList().map(p=>[S.current,p.pos,p.firstName,p.lastName,p.college,p.classYr,ht(p),p.weight,p.cfbOvr,p.devCfb,maddenDev(p),p.round==8?"UDFA":p.round,draftRound(p)==8?"UDFA":draftRound(p),p.fate?FATES[p.fate].label:"",normAdj(p.adj).program,normAdj(p.adj).history,normAdj(p.adj).scheme,p.age,p.appearance,p.archetype||"",abilText(p,"Physical"),abilText(p,"Mental"),...allR.map(a=>p.ratings[a]??""),...allR.map(a=>p.ratings[a]!=null||p.override?.[a]!=null?(maddenVal(p,a).v??""):"")]);
   return [head,...rows].map(r=>r.map(csvCell).join(",")).join("\n");
 }
 function importJson(txt){
@@ -613,6 +730,7 @@ $("#newClassBtn").onclick=()=>{
   save();renderAll();toast("Class of "+k);
 };
 $("#strength").oninput=e=>{S.strength=+e.target.value;$("#strengthVal").textContent=S.strength;save();};
+$("#fateCfg").addEventListener("click",e=>{const b=e.target.closest("[data-fc]");if(!b)return;const c=FATE_CFG_UI.find(x=>x[0]===b.dataset.fc);S.fateCfg[c[0]]=clamp(S.fateCfg[c[0]]+(+b.dataset.d),c[2],c[3]);save();renderData();renderBoard();});
 $("#targets").addEventListener("click",e=>{const b=e.target.closest("[data-t]");if(!b)return;const p=b.dataset.t;S.targets[p]=clamp(target(p)+(+b.dataset.d),3,5);save();renderData();renderBoard();});
 $("#expJson").onclick=()=>download(`draft-bridge-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(S,null,1),"application/json");
 $("#copyJson").onclick=async()=>{const t=JSON.stringify(S);try{await navigator.clipboard.writeText(t);toast("Backup copied. Paste it into Notes");}catch(e){$("#impText").value=t;$("#impText").select();toast("Copy blocked. JSON is in the box below");}};
@@ -627,7 +745,7 @@ $("#delClass").onclick=()=>{
   S.current=Object.keys(S.classes)[0];save();renderAll();toast("Class deleted");
 };
 // expose for testing
-window.__DB={get state(){return S;},convert,buildCsv};
+window.__DB={get state(){return S;},convert,buildCsv,maddenDetail,draftRound};
 renderAll();
 </script>
 </body>
