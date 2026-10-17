@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f17">
+<title>Draft Bridge: CFB 26 → Madden 26</title>
+<style>
+:root{--bg:#0b0f17;--panel:#141b27;--panel2:#1b2433;--line:#2a3547;--txt:#e8eef8;--mut:#8d9bb3;--acc:#39d98a;--acc2:#ffb020;--bad:#ff5d6c;--blue:#4da3ff;--r:14px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0b0f17 80%,rgba(11,15,23,.85));padding:calc(10px + env(safe-area-inset-top)) 14px 8px;border-bottom:1px solid var(--line)}
+h1{font-size:20px;margin:0;letter-spacing:.3px}h1 span{color:var(--acc)}
+.sub{color:var(--mut);font-size:12px}
+.row{display:flex;gap:8px;align-items:center}
+.grow{flex:1}
+select,input,textarea,button{font:inherit;color:var(--txt)}
+select,input[type=text],input[type=number],textarea{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:46px;width:100%}
+textarea{min-height:110px;font-size:16px;font-family:ui-monospace,Menlo,monospace}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:12px;min-height:48px;padding:10px 14px;font-weight:600;cursor:pointer}
+button.pri{background:var(--acc);color:#04210f;border-color:var(--acc)}
+button.warn{background:transparent;color:var(--bad);border-color:var(--bad)}
+button.ghost{background:transparent}
+button:active{transform:scale(.98)}
+main{padding:12px 14px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;min-width:64px;min-height:52px;padding:6px 10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);text-align:center;font-weight:700;font-size:14px}
+.chip small{display:block;font-weight:600;font-size:11px;color:var(--mut)}
+.chip.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.chip.full small{color:var(--acc)}
+.chip.over small{color:var(--acc2)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:10px 0}
+.pl{display:flex;gap:10px;align-items:center}
+.pl .ovr{min-width:52px;height:52px;border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+.pl .ovr small{font-size:9px;color:var(--mut);font-weight:600}
+.pl .nm{font-weight:700}
+.pl .meta{color:var(--mut);font-size:13px}
+.note{font-size:12px;color:var(--acc2);background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.35);border-radius:10px;padding:8px 10px;margin:8px 0}
+.info{font-size:13px;color:var(--mut)}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);background:#0e1420;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs button{border:0;border-radius:0;background:transparent;min-height:64px;font-size:12px;color:var(--mut);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+nav.tabs button b{font-size:20px}
+nav.tabs button.on{color:var(--acc)}
+.view{display:none}.view.on{display:block}
+label.f{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rt{display:grid;grid-template-columns:1fr 78px 64px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.rt .ab{font-weight:800}.rt .fn{font-size:11px;color:var(--mut)}
+.rt input{text-align:center;min-height:46px;padding:6px}
+.mv{height:46px;border-radius:10px;background:#0f2a1d;border:1px solid #1f5a3c;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--acc);font-size:18px}
+.mv.ov{background:#2a210b;border-color:#6b5310;color:var(--acc2)}
+.tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:6px;background:var(--panel2);color:var(--mut);margin-left:4px;vertical-align:middle}
+.sheet{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;display:none;padding:calc(10px + env(safe-area-inset-top)) 14px calc(110px + env(safe-area-inset-bottom))}
+.sheet.on{display:block}
+.sheetbar{position:fixed;left:0;right:0;bottom:0;z-index:51;display:none;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#0e1420;border-top:1px solid var(--line)}
+.sheetbar.on{display:flex}
+.sheetbar button{flex:1}
+input[type=range]{width:100%;accent-color:var(--acc);height:36px}
+.fld{display:flex;align-items:center;gap:12px;min-height:58px;padding:8px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);margin:6px 0;cursor:pointer;user-select:none}
+.fld .bx{width:30px;height:30px;border-radius:8px;border:2px solid var(--mut);flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:900;color:#04210f}
+.fld.ck{opacity:.55}.fld.ck .bx{background:var(--acc);border-color:var(--acc)}
+.fld .lb{flex:1}.fld .lb small{display:block;color:var(--mut);font-size:11px}
+.fld .vl{font-size:22px;font-weight:800;color:var(--acc);text-align:right}
+.sec{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--blue);margin:16px 0 4px;font-weight:700}
+.prog{height:10px;border-radius:6px;background:var(--panel2);overflow:hidden;margin:8px 0}
+.prog i{display:block;height:100%;background:var(--acc);width:0}
+.stp{display:flex;align-items:center;gap:6px}
+.stp button{min-width:44px;padding:0}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--acc);color:#04210f;padding:10px 16px;border-radius:12px;font-weight:700;z-index:99;display:none;max-width:90vw;text-align:center}
+ol.how li{margin:6px 0}
+.tgt{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.tgt .stp button{min-width:40px;min-height:44px}
+.tgt div{background:var(--panel2);border-radius:10px;padding:6px;text-align:center;font-size:13px}
+.empty{color:var(--mut);text-align:center;padding:24px 8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div class="grow"><h1>Draft <span>Bridge</span></h1><div class="sub">CFB 26 → Madden 26 · Dynasty → Franchise draft class helper</div></div>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <select id="classSel" class="grow" aria-label="Draft class"></select>
+    <button id="newClassBtn" style="min-width:96px">+ Class</button>
+  </div>
+</header>
+
+<main>
+  <!-- BOARD -->
+  <section id="v-board" class="view on">
+    <div class="chips" id="posChips"></div>
+    <div class="row" style="margin-top:6px">
+      <div class="grow"><b id="posTitle"></b> <span class="info" id="posCount"></span></div>
+    </div>
+    <div id="posList"></div>
+    <button class="pri" id="addBtn" style="width:100%;margin-top:6px">+ Add prospect</button>
+    <div class="info" style="margin-top:14px" id="classSummary"></div>
+  </section>
+
+  <!-- CARD MODE -->
+  <section id="v-card" class="view">
+    <div class="note">Field order is a <b>best guess</b> until it's confirmed against your Madden 26 Edit Draft Class screen. It's set in <code>CARD_ORDER</code> at the top of the script.</div>
+    <div class="row">
+      <select id="cardSel" class="grow" aria-label="Player"></select>
+    </div>
+    <div id="cardBody"></div>
+  </section>
+
+  <!-- DATA -->
+  <section id="v-data" class="view">
+    <div class="card">
+      <div class="sec" style="margin-top:0">Conversion strength</div>
+      <div class="info">How hard to cut CFB numbers down to Madden rookie level. Athletic ratings stay near the CFB value, while skill and mental ratings (AWR/PRC) drop more. Each player's projected round adds or subtracts a few points.</div>
+      <input type="range" id="strength" min="0" max="100" step="5">
+      <div class="row info"><span>Light</span><span class="grow" style="text-align:center"><b id="strengthVal"></b></span><span>Heavy</span></div>
+      <div class="note">Community estimate, not EA's formula. EA hasn't published how CFB ratings translate to Madden. Adjust it to taste, or tap any converted number to override it.</div>
+    </div>
+    <div class="card">
+      <div class="sec" style="margin-top:0">Top-N per position</div>
+      <div class="info">How many prospects you aim to copy at each position (3–5).</div>
+      <div class="tgt" id="targets"></div>
+    </div>
+    <div class="card">
+      <div class="sec" style="margin-top:0">Backup &amp; export</div>
+      <div class="info">Everything saves automatically on this phone. Make a backup now and then, because clearing your browser data wipes it.</div>
+      <div class="grid2" style="margin-top:10px">
+        <button id="expJson">⬇ JSON backup</button>
+        <button id="copyJson">📋 Copy JSON</button>
+        <button id="expCsv">⬇ CSV (class)</button>
+        <button id="impFileBtn">⬆ Import file</button>
+      </div>
+      <input type="file" id="impFile" accept=".json,application/json" style="display:none">
+      <label class="f">Or paste a JSON backup here</label>
+      <textarea id="impText" placeholder='{"app":"draft-bridge",...}'></textarea>
+      <button id="impPaste" style="width:100%;margin-top:8px">Import pasted JSON</button>
+      <button class="warn" id="delClass" style="width:100%;margin-top:14px">Delete this class</button>
+    </div>
+  </section>
+
+  <!-- HOW TO -->
+  <section id="v-how" class="view">
+    <div class="card">
+      <div class="sec" style="margin-top:0">Why this exists</div>
+      <div class="info">CFB 26 can't export Dynasty draft classes to Madden 26. Only a Road to Glory player transfers, and only into Superstar mode. So you rebuild your guys by editing Madden's generated prospects, and this page makes that faster.</div>
+    </div>
+    <div class="card">
+      <div class="sec" style="margin-top:0">Workflow</div>
+      <ol class="how">
+        <li><b>CFB 26:</b> when players declare, open each top prospect's player card and enter his bio and ratings here (Board → + Add prospect).</li>
+        <li>Set a projected <b>round</b>, then check the converted Madden numbers. Tap any number to override it.</li>
+        <li><b>Madden 26 (PS5):</b> Franchise → get past preseason → <b>Scouting → Prospects → press L3 → Edit Draft Class</b>.</li>
+        <li>Pick a generated prospect at the same position, open <b>Card</b> mode here, and work down the list, tapping each field once you've set it. Then tap <b>Next player</b>.</li>
+        <li>To start Year 1 with a downloaded class instead, use Franchise Home → <b>Choose Draft Class → Import Local File</b>.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <div class="sec" style="margin-top:0">⚠ Generic-appearance bug</div>
+      <div class="info">In Madden 26, edited faces, skin tone, and gear can look right in the editor but show up as a generic player in games. The community workaround: upload your class to Madden Share, then load it from <b>Prospects → L3 → Download from Download Center</b>, not Import Local File.</div>
+    </div>
+    <div class="card info">
+      Ratings use CFB 26's abbreviations (SPD, THP, SAC, MAC, DAC, PRC, MCV, ZCV, and so on). Madden uses the same rating families, but confirm names on your screen. Madden 26 positions (LEDG/REDG edges, SAM/MIKE/WILL linebackers) follow EA's Madden 26 notes. The long snapper (LS) is left out for now.<br><br>
+      Not affiliated with or endorsed by EA. Data stays on your phone.
+    </div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button data-v="board" class="on"><b>🏈</b>Board</button>
+  <button data-v="card"><b>✅</b>Card</button>
+  <button data-v="data"><b>⚙️</b>Data</button>
+  <button data-v="how"><b>❔</b>How to</button>
+</nav>
+
+<!-- EDITOR SHEET -->
+<div class="sheet" id="editor"></div>
+<div class="sheetbar" id="editorBar">
+  <button class="ghost" id="edCancel">Cancel</button>
+  <button class="warn" id="edDelete" style="flex:.7">Delete</button>
+  <button class="pri" id="edSave">Save</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== CONFIG (edit me) ===================== */
+// Madden 26 positions (EA's Madden 26 notes: LEDG/REDG edges, SAM/MIKE/WILL LBs). LS omitted for now.
+const POSITIONS = ["QB","HB","FB","WR","TE","LT","LG","C","RG","RT","LEDG","DT","REDG","SAM","MIKE","WILL","CB","FS","SS","K","P"];
+const DEFAULT_TARGET = {FB:3,K:3,P:3}; // everyone else defaults to 5
+
+// CFB 26 rating abbreviations -> full names (from CFB 26 ratings list)
+const RATINGS = {
+  SPD:"Speed",STR:"Strength",AGI:"Agility",ACC:"Acceleration",AWR:"Awareness",INJ:"Injury",TGH:"Toughness",STA:"Stamina",
+  BTK:"Break Tackle",TRK:"Trucking",COD:"Change of Direction",BCV:"Ball Carrier Vision",SFA:"Stiff Arm",SPM:"Spin Move",JKM:"Juke Move",CAR:"Carrying",JMP:"Jumping",
+  THP:"Throw Power",SAC:"Short Throw Accuracy",MAC:"Medium Throw Accuracy",DAC:"Deep Throw Accuracy",RUN:"Throw on the Run",TUP:"Throw Under Pressure",BSK:"Break Sack",PAC:"Play Action",
+  CTH:"Catching",SRR:"Short Route Running",MRR:"Medium Route Running",DRR:"Deep Route Running",CIT:"Catch in Traffic",SPC:"Spectacular Catch",RLS:"Release",
+  PBK:"Pass Block",PBP:"Pass Block Power",PBF:"Pass Block Finesse",RBK:"Run Block",RBP:"Run Block Power",RBF:"Run Block Finesse",LBK:"Lead Block",IBK:"Impact Blocking",
+  PRC:"Play Recognition",TAK:"Tackle",POW:"Hit Power",PMV:"Power Moves",FMV:"Finesse Moves",BSH:"Block Shedding",PUR:"Pursuit",MCV:"Man Coverage",ZCV:"Zone Coverage",PRS:"Press",
+  KPW:"Kick Power",KAC:"Kick Accuracy",RET:"Return"
+};
+// How each rating converts. Anything not listed = "skill".
+const ATHLETIC = ["SPD","ACC","AGI","COD","STR","JMP","STA","INJ","TGH","THP","KPW"];
+const MENTAL = ["AWR","PRC"];
+
+// Position-relevant ratings shown in quick entry
+const OL = ["STR","AGI","AWR","PBK","PBP","PBF","RBK","RBP","RBF","LBK","IBK","INJ"];
+const EDGE = ["SPD","ACC","STR","AGI","AWR","PMV","FMV","BSH","PUR","TAK","POW","PRC"];
+const LB = ["SPD","ACC","STR","AGI","AWR","TAK","POW","PUR","PRC","BSH","MCV","ZCV"];
+const SAF = ["SPD","ACC","AGI","AWR","MCV","ZCV","PRS","PRC","TAK","POW","PUR","CTH"];
+const POS_RATINGS = {
+  QB:["THP","SAC","MAC","DAC","RUN","TUP","BSK","PAC","AWR","SPD","ACC","AGI"],
+  HB:["SPD","ACC","AGI","COD","STR","AWR","CAR","BCV","BTK","TRK","SFA","SPM","JKM","CTH"],
+  FB:["SPD","STR","AWR","RBK","LBK","IBK","PBK","CAR","TRK","BTK","CTH"],
+  WR:["SPD","ACC","AGI","COD","AWR","CTH","CIT","SPC","SRR","MRR","DRR","RLS","JMP","RET"],
+  TE:["SPD","ACC","STR","AWR","CTH","CIT","SPC","SRR","MRR","RLS","RBK","PBK"],
+  LT:OL,LG:OL,C:OL,RG:OL,RT:OL,
+  LEDG:EDGE,REDG:EDGE,DT:["STR","SPD","ACC","AWR","PMV","FMV","BSH","TAK","POW","PUR","PRC"],
+  SAM:LB,MIKE:LB,WILL:LB,
+  CB:["SPD","ACC","AGI","COD","AWR","MCV","ZCV","PRS","PRC","TAK","JMP","CTH","RET"],
+  FS:SAF,SS:SAF,
+  K:["KPW","KAC","AWR"],P:["KPW","KAC","AWR"]
+};
+
+// Madden "Edit Draft Class" field order for Card mode.
+// ⚠ BEST GUESS until confirmed from Caleb's PS5 screenshots. Reorder freely.
+// Items: bio keys (see BIO_LABELS) or "@ratings" (all of the player's ratings in RATING_ORDER).
+const CARD_ORDER = ["firstName","lastName","position","college","age","height","weight","devMadden","appearance","@ratings"];
+// Rating order inside the card: CFB/Madden category order (General, Ball Carrier, QB, Receiver, Blocking, Defense, Kicking).
+const RATING_ORDER = ["SPD","ACC","AGI","STR","AWR","INJ","TGH","STA","CAR","BCV","BTK","TRK","SFA","SPM","JKM","COD","JMP","THP","SAC","MAC","DAC","RUN","TUP","BSK","PAC","CTH","CIT","SPC","SRR","MRR","DRR","RLS","PBK","PBP","PBF","RBK","RBP","RBF","LBK","IBK","TAK","POW","PMV","FMV","BSH","PUR","MCV","ZCV","PRS","PRC","KPW","KAC","RET"];
+
+// Conversion knobs (community estimate, NOT EA's formula)
+const CONV = {
+  floor:40,                         // values scale toward this floor
+  athleticMaxDrop:4,                // athletic: up to -4 at full strength
+  skillKeepAtMax:0.55,              // skill: keep 55% of (value-floor) at full strength
+  mentalKeepAtMax:0.40,             // AWR/PRC: keep 40% at full strength
+  roundBonus:{1:3,2:2,3:1,4:0,5:-1,6:-2,7:-3,8:-4}, // applied to skill+mental; 8 = UDFA
+  min:25,max:99
+};
+const CFB_DEV = ["Normal","Impact","Star","Elite"];
+const MADDEN_DEV = ["Normal","Star","Superstar","X-Factor"];
+const DEV_MAP = {Normal:"Normal",Impact:"Normal",Star:"Star",Elite:"Superstar"}; // estimate; override per player
+const CLASS_YRS = ["FR","FR (RS)","SO","SO (RS)","JR","JR (RS)","SR","SR (RS)"];
+/* =========================================================== */
+
+const KEY="draftBridge.v1";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+function defaultState(){
+  const y=new Date().getFullYear()+1;
+  return {app:"draft-bridge",version:1,strength:50,targets:{},current:String(y),classes:{[String(y)]:{players:[]}},checks:{}};
+}
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))||defaultState();}catch(e){S=defaultState();}
+if(!S.classes||!Object.keys(S.classes).length)S=defaultState();
+if(!S.classes[S.current])S.current=Object.keys(S.classes)[0];
+S.checks=S.checks||{};S.targets=S.targets||{};
+let curPos="QB", editing=null, cardIdx=0;
+
+function save(){localStorage.setItem(KEY,JSON.stringify(S));}
+function toast(m){const t=$("#toast");t.textContent=m;t.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>t.style.display="none",1800);}
+function players(){return S.classes[S.current].players;}
+function target(p){return S.targets[p]??DEFAULT_TARGET[p]??5;}
+
+function convert(abbr,v,round){
+  if(v===""||v==null||isNaN(v))return null;
+  v=+v; const s=S.strength/100, f=CONV.floor, rb=CONV.roundBonus[round]??0;
+  let m;
+  if(ATHLETIC.includes(abbr)) m=v-CONV.athleticMaxDrop*s;
+  else if(MENTAL.includes(abbr)) m=f+(v-f)*(1-(1-CONV.mentalKeepAtMax)*s)+rb;
+  else m=f+(v-f)*(1-(1-CONV.skillKeepAtMax)*s)+rb;
+  if(v<f && !ATHLETIC.includes(abbr)) m=v+rb;
+  return clamp(Math.round(m),CONV.min,CONV.max);
+}
+function maddenVal(p,abbr){
+  if(p.override&&p.override[abbr]!=null&&p.override[abbr]!=="")return {v:+p.override[abbr],ov:true};
+  return {v:convert(abbr,p.ratings?.[abbr],p.round),ov:false};
+}
+const kind=a=>ATHLETIC.includes(a)?"athletic":MENTAL.includes(a)?"mental":"skill";
+const ht=p=>p.ft?`${p.ft}'${p.inch??0}"`:"";
+const rndTxt=r=>r==8?"UDFA":r?("Rd "+r):"Rd ?";
+
+/* ---------- render: header/class ---------- */
+function renderClassSel(){
+  const ks=Object.keys(S.classes).sort();
+  $("#classSel").innerHTML=ks.map(k=>`<option value="${esc(k)}" ${k===S.current?"selected":""}>Class of ${esc(k)} · ${S.classes[k].players.length} player${S.classes[k].players.length===1?"":"s"}</option>`).join("");
+}
+/* ---------- board ---------- */
+function renderBoard(){
+  const ps=players();
+  $("#posChips").innerHTML=POSITIONS.map(p=>{
+    const n=ps.filter(x=>x.pos===p).length,t=target(p);
+    const cls=n>t?"over":n>=t?"full":"";
+    return `<button class="chip ${p===curPos?"on":""} ${cls}" data-pos="${p}">${p}<small>${n}/${t}</small></button>`;
+  }).join("");
+  const list=ps.filter(x=>x.pos===curPos).sort((a,b)=>(a.round||9)-(b.round||9)||(b.cfbOvr||0)-(a.cfbOvr||0));
+  const t=target(curPos);
+  $("#posTitle").textContent=curPos;
+  $("#posCount").textContent=`${list.length}/${t} slots`+(list.length>t?" (over target)":"");
+  $("#posList").innerHTML=list.length?list.map(p=>{
+    const done=cardProgress(p);
+    return `<div class="card pl" data-id="${p.id}">
+      <div class="ovr">${esc(p.cfbOvr||"–")}<small>CFB</small></div>
+      <div class="grow"><div class="nm">${esc(p.firstName)} ${esc(p.lastName)}</div>
+      <div class="meta">${esc(p.college||"—")} · ${esc(p.classYr||"")} · ${ht(p)} ${p.weight?esc(p.weight)+" lb":""}</div>
+      <div class="meta">${rndTxt(p.round)} · Dev ${esc(p.devCfb||"?")}→${esc(p.devMadden||DEV_MAP[p.devCfb]||"?")} · Card ${done.c}/${done.t}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><button data-edit="${p.id}" style="min-height:40px;padding:6px 12px">Edit</button><button data-card="${p.id}" style="min-height:40px;padding:6px 12px">Card</button></div>
+    </div>`;}).join(""):`<div class="empty">No ${curPos} prospects yet.<br>Aim for your top ${t}.</div>`;
+  const tot=ps.length, goal=POSITIONS.reduce((a,p)=>a+target(p),0);
+  const done=ps.filter(p=>{const d=cardProgress(p);return d.t&&d.c===d.t;}).length;
+  $("#classSummary").textContent=`Class total: ${tot} / ${goal} target · ${done} fully entered in Madden`;
+  document.querySelector('#posChips .chip.on')?.scrollIntoView({inline:"center",block:"nearest"});
+}
+
+/* ---------- editor ---------- */
+function openEditor(p){
+  editing=p?JSON.parse(JSON.stringify(p)):{id:uid(),pos:curPos,firstName:"",lastName:"",college:"",classYr:"JR",ft:6,inch:1,weight:"",cfbOvr:"",devCfb:"Normal",devMadden:"",round:"",age:"",appearance:"",ratings:{},override:{}};
+  editing._new=!p;
+  renderEditor();
+  $("#editor").classList.add("on");$("#editorBar").classList.add("on");
+  $("#edDelete").style.display=p?"":"none";
+  $("#editor").scrollTop=0;
+}
+function closeEditor(){editing=null;$("#editor").classList.remove("on");$("#editorBar").classList.remove("on");}
+function opt(arr,sel){return arr.map(v=>`<option ${String(v)===String(sel)?"selected":""}>${esc(v)}</option>`).join("");}
+function renderEditor(){
+  const p=editing;
+  const rounds=[["","?"],[1,"1"],[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"],[7,"7"],[8,"UDFA"]];
+  $("#editor").innerHTML=`
+  <div class="row"><h1 class="grow" style="font-size:18px">${p._new?"Add":"Edit"} prospect</h1><span class="tag">${esc(p.pos)}</span></div>
+  <div class="grid2">
+    <div><label class="f">First name</label><input type="text" id="e_firstName" value="${esc(p.firstName)}" autocomplete="off"></div>
+    <div><label class="f">Last name</label><input type="text" id="e_lastName" value="${esc(p.lastName)}" autocomplete="off"></div>
+  </div>
+  <div class="grid2">
+    <div><label class="f">Madden position</label><select id="e_pos">${opt(POSITIONS,p.pos)}</select></div>
+    <div><label class="f">School</label><input type="text" id="e_college" value="${esc(p.college)}"></div>
+  </div>
+  <div class="grid3">
+    <div><label class="f">Class yr</label><select id="e_classYr">${opt(CLASS_YRS,p.classYr)}</select></div>
+    <div><label class="f">Height ft</label><select id="e_ft">${opt([5,6,7],p.ft)}</select></div>
+    <div><label class="f">in</label><select id="e_inch">${opt([0,1,2,3,4,5,6,7,8,9,10,11],p.inch)}</select></div>
+  </div>
+  <div class="grid3">
+    <div><label class="f">Weight (lb)</label><input type="number" inputmode="numeric" id="e_weight" value="${esc(p.weight)}"></div>
+    <div><label class="f">CFB OVR</label><input type="number" inputmode="numeric" id="e_cfbOvr" value="${esc(p.cfbOvr)}"></div>
+    <div><label class="f">Age (Madden)</label><input type="number" inputmode="numeric" id="e_age" value="${esc(p.age)}" placeholder="opt."></div>
+  </div>
+  <div class="grid3">
+    <div><label class="f">CFB dev</label><select id="e_devCfb">${opt(CFB_DEV,p.devCfb)}</select></div>
+    <div><label class="f">Madden dev</label><select id="e_devMadden"><option value="">Auto (${esc(DEV_MAP[p.devCfb]||"")})</option>${MADDEN_DEV.map(d=>`<option ${d===p.devMadden?"selected":""}>${d}</option>`).join("")}</select></div>
+    <div><label class="f">Proj. round</label><select id="e_round">${rounds.map(([v,l])=>`<option value="${v}" ${String(v)===String(p.round)?"selected":""}>${l}</option>`).join("")}</select></div>
+  </div>
+  <label class="f">Appearance notes (skin tone, hair, build, gear)</label>
+  <input type="text" id="e_appearance" value="${esc(p.appearance)}" placeholder="e.g. dark skin, short locs, visor">
+  <div class="card" style="margin-top:14px">
+    <div class="row"><div class="grow"><b>Ratings</b> <span class="info">CFB → Madden</span></div><span class="tag" id="e_strTag">Strength ${S.strength}</span></div>
+    <input type="range" id="e_strength" min="0" max="100" step="5" value="${S.strength}" aria-label="Conversion strength">
+    <div class="note" style="margin:4px 0 8px">Community estimate, not EA's formula. Tap a green number to override it. Orange means overridden.</div>
+    <div class="rt info" style="border:0"><span>Rating</span><span style="text-align:center">CFB</span><span style="text-align:center">Madden</span></div>
+    <div id="e_ratings"></div>
+  </div>`;
+  renderEditorRatings();
+  const bind=(id,k,num)=>{const el=$("#e_"+id);el.addEventListener("input",()=>{p[k]=num?(el.value===""?"":+el.value):el.value;if(["round","devCfb"].includes(k)){renderEditorRatings();if(k==="devCfb")$("#e_devMadden").options[0].text=`Auto (${DEV_MAP[p.devCfb]})`;}});el.addEventListener("change",()=>el.dispatchEvent(new Event("input")));};
+  ["firstName","lastName","college","appearance","classYr","devCfb","devMadden"].forEach(k=>bind(k,k));
+  ["ft","inch","weight","cfbOvr","age"].forEach(k=>bind(k,k,true));
+  bind("round","round",true);
+  $("#e_pos").addEventListener("change",e=>{p.pos=e.target.value;renderEditorRatings();});
+  $("#e_strength").addEventListener("input",e=>{S.strength=+e.target.value;save();renderEditorRatings();const tg=document.getElementById("e_strTag");if(tg)tg.textContent="Strength "+S.strength;});
+}
+function renderEditorRatings(){
+  const p=editing;
+  $("#e_ratings").innerHTML=(POS_RATINGS[p.pos]||[]).map(a=>{
+    const m=maddenVal(p,a);
+    return `<div class="rt"><div><span class="ab">${a}</span><span class="tag">${kind(a)}</span><div class="fn">${RATINGS[a]}</div></div>
+      <input type="number" inputmode="numeric" min="0" max="99" data-r="${a}" value="${esc(p.ratings[a]??"")}" aria-label="CFB ${a}">
+      <div class="mv ${m.ov?"ov":""}" data-ov="${a}" role="button" aria-label="Madden ${a}">${m.v??"–"}</div></div>`;
+  }).join("");
+  $("#e_ratings").querySelectorAll("input[data-r]").forEach(el=>el.addEventListener("input",()=>{
+    const a=el.dataset.r;p.ratings[a]=el.value===""?"":clamp(+el.value,0,99);
+    const m=maddenVal(p,a),box=$(`#e_ratings [data-ov="${a}"]`);box.textContent=m.v??"–";
+  }));
+  $("#e_ratings").querySelectorAll("[data-ov]").forEach(el=>el.addEventListener("click",()=>{
+    const a=el.dataset.ov, cur=maddenVal(p,a);
+    const r=prompt(`Madden ${a} (${RATINGS[a]}). Enter a number, or leave blank to go back to the estimate:`,cur.ov?cur.v:"");
+    if(r===null)return;
+    if(r.trim()===""){delete p.override[a];}else{const n=parseInt(r,10);if(!isNaN(n))p.override[a]=clamp(n,0,99);}
+    renderEditorRatings();
+  }));
+}
+function saveEditor(){
+  const p=editing;
+  if(!p.firstName.trim()&&!p.lastName.trim()){toast("Add a name first");return;}
+  // keep only ratings relevant to current position
+  const keep=POS_RATINGS[p.pos]||[];
+  Object.keys(p.ratings).forEach(k=>{if(!keep.includes(k)||p.ratings[k]==="")delete p.ratings[k];});
+  Object.keys(p.override).forEach(k=>{if(!keep.includes(k))delete p.override[k];});
+  const isNew=p._new;delete p._new;
+  const ps=players(),i=ps.findIndex(x=>x.id===p.id);
+  if(i>=0)ps[i]=p;else ps.push(p);
+  if(isNew&&ps.filter(x=>x.pos===p.pos).length>target(p.pos))toast(`Saved (over your ${p.pos} target)`);else toast("Saved ✓");
+  curPos=p.pos;save();closeEditor();renderAll();
+}
+
+/* ---------- card mode ---------- */
+const BIO_LABELS={firstName:"First Name",lastName:"Last Name",position:"Position",college:"College",age:"Age",height:"Height",weight:"Weight",devMadden:"Development Trait",appearance:"Appearance"};
+function cardFields(p){
+  const out=[];
+  CARD_ORDER.forEach(k=>{
+    if(k==="@ratings"){
+      const rs=(POS_RATINGS[p.pos]||[]).slice().sort((a,b)=>RATING_ORDER.indexOf(a)-RATING_ORDER.indexOf(b));
+      rs.forEach(a=>{const m=maddenVal(p,a);if(m.v!=null)out.push({k:"r:"+a,lab:RATINGS[a],sub:a+(m.ov?" · override":" · est. from CFB "+p.ratings[a]),v:m.v,sec:"Ratings"});});
+    }else{
+      let v={firstName:p.firstName,lastName:p.lastName,position:p.pos,college:p.college,age:p.age,height:ht(p),weight:p.weight?p.weight+" lb":"",devMadden:p.devMadden||DEV_MAP[p.devCfb],appearance:p.appearance}[k];
+      if(v===""||v==null){if(k==="age"||k==="appearance")return; v="—";}
+      out.push({k,lab:BIO_LABELS[k],sub:k==="devMadden"?`from CFB ${p.devCfb||"?"}${p.devMadden?"":" (est.)"} · editable on prospects? confirm`:"",v,sec:"Bio"});
+    }
+  });
+  return out;
+}
+function cardProgress(p){const f=cardFields(p),c=S.checks[p.id]||{};return {t:f.length,c:f.filter(x=>c[x.k]).length};}
+function cardOrderList(){return players().slice().sort((a,b)=>POSITIONS.indexOf(a.pos)-POSITIONS.indexOf(b.pos)||(a.round||9)-(b.round||9)||(b.cfbOvr||0)-(a.cfbOvr||0));}
+function renderCard(){
+  const list=cardOrderList();
+  if(!list.length){$("#cardSel").innerHTML="";$("#cardBody").innerHTML=`<div class="empty">Add prospects on the Board first.</div>`;return;}
+  cardIdx=clamp(cardIdx,0,list.length-1);
+  $("#cardSel").onchange=e=>{cardIdx=+e.target.value;renderCard();};
+  $("#cardSel").innerHTML=list.map((p,i)=>{const d=cardProgress(p);return `<option value="${i}" ${i===cardIdx?"selected":""}>${d.c===d.t?"✅ ":""}${esc(p.pos)} · ${esc(p.firstName)} ${esc(p.lastName)} (${d.c}/${d.t})</option>`;}).join("");
+  const p=list[cardIdx],f=cardFields(p),c=S.checks[p.id]=S.checks[p.id]||{};
+  const n=f.filter(x=>c[x.k]).length;
+  let sec="",html=`<div class="card pl"><div class="ovr">${esc(p.pos)}<small>${rndTxt(p.round)}</small></div><div class="grow"><div class="nm" style="font-size:20px">${esc(p.firstName)} ${esc(p.lastName)}</div><div class="meta">${esc(p.college||"")} · CFB ${esc(p.cfbOvr||"?")} OVR · player ${cardIdx+1} of ${list.length}</div></div></div>
+  <div class="row info"><span class="grow">${n}/${f.length} fields entered</span><button class="ghost" id="ckReset" style="min-height:36px;padding:4px 10px;font-size:13px">Reset</button></div>
+  <div class="prog"><i style="width:${f.length?n/f.length*100:0}%"></i></div>`;
+  f.forEach(x=>{
+    if(x.sec!==sec){sec=x.sec;html+=`<div class="sec">${sec}</div>`;}
+    html+=`<div class="fld ${c[x.k]?"ck":""}" data-k="${esc(x.k)}"><div class="bx">${c[x.k]?"✓":""}</div><div class="lb">${esc(x.lab)}${x.sub?`<small>${esc(x.sub)}</small>`:""}</div><div class="vl">${esc(x.v)}</div></div>`;
+  });
+  html+=`<div class="grid2" style="margin-top:12px"><button id="cPrev">← Prev</button><button class="pri" id="cNext">Next player →</button></div>`;
+  $("#cardBody").innerHTML=html;
+  $("#cardBody").querySelectorAll(".fld").forEach(el=>el.addEventListener("click",()=>{
+    const k=el.dataset.k;c[k]=!c[k];save();
+    el.classList.toggle("ck",!!c[k]);el.querySelector(".bx").textContent=c[k]?"✓":"";
+    const nn=f.filter(x=>c[x.k]).length;
+    $("#cardBody .row.info span").textContent=`${nn}/${f.length} fields entered`;
+    $("#cardBody .prog i").style.width=(nn/f.length*100)+"%";
+    const o=$("#cardSel").options[cardIdx];if(o)o.text=`${nn===f.length?"✅ ":""}${p.pos} · ${p.firstName} ${p.lastName} (${nn}/${f.length})`;
+    if(nn===f.length)toast("Player done! 🎉 Tap Next player");
+  }));
+  $("#ckReset").onclick=()=>{S.checks[p.id]={};save();renderCard();};
+  $("#cPrev").onclick=()=>{cardIdx=Math.max(0,cardIdx-1);renderCard();window.scrollTo(0,0);};
+  $("#cNext").onclick=()=>{if(cardIdx<list.length-1){cardIdx++;renderCard();window.scrollTo(0,0);}else toast("That's the whole class 🏁");};
+}
+
+/* ---------- data ---------- */
+function renderData(){
+  $("#strength").value=S.strength;$("#strengthVal").textContent=S.strength;
+  $("#targets").innerHTML=POSITIONS.map(p=>`<div><b>${p}</b><div class="stp" style="justify-content:center"><button data-t="${p}" data-d="-1">−</button><span style="min-width:16px">${target(p)}</span><button data-t="${p}" data-d="1">+</button></div></div>`).join("");
+}
+function download(name,text,type){
+  const b=new Blob([text],{type});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function csvCell(v){v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function buildCsv(){
+  const allR=RATING_ORDER;
+  const head=["Class","Pos","First","Last","School","ClassYr","Height","Weight","CFB_OVR","CFB_Dev","Madden_Dev","Round","Age","Appearance",...allR.map(a=>"CFB_"+a),...allR.map(a=>"MAD_"+a)];
+  const rows=cardOrderList().map(p=>[S.current,p.pos,p.firstName,p.lastName,p.college,p.classYr,ht(p),p.weight,p.cfbOvr,p.devCfb,p.devMadden||DEV_MAP[p.devCfb],p.round==8?"UDFA":p.round,p.age,p.appearance,...allR.map(a=>p.ratings[a]??""),...allR.map(a=>p.ratings[a]!=null||p.override?.[a]!=null?(maddenVal(p,a).v??""):"")]);
+  return [head,...rows].map(r=>r.map(csvCell).join(",")).join("\n");
+}
+function importJson(txt){
+  let d;try{d=JSON.parse(txt);}catch(e){toast("That's not valid JSON");return false;}
+  if(!d||d.app!=="draft-bridge"||!d.classes){toast("Not a Draft Bridge backup");return false;}
+  if(!confirm("Replace everything on this phone with this backup?"))return false;
+  S=Object.assign(defaultState(),d);S.checks=S.checks||{};S.targets=S.targets||{};
+  if(!S.classes[S.current])S.current=Object.keys(S.classes)[0];
+  save();renderAll();toast("Backup restored ✓");return true;
+}
+
+/* ---------- wiring ---------- */
+function renderAll(){renderClassSel();renderBoard();renderData();if($("#v-card").classList.contains("on"))renderCard();}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="v-"+b.dataset.v));
+  if(b.dataset.v==="card")renderCard();if(b.dataset.v==="board")renderBoard();if(b.dataset.v==="data")renderData();
+  window.scrollTo(0,0);
+}));
+$("#posChips").addEventListener("click",e=>{const c=e.target.closest(".chip");if(c){curPos=c.dataset.pos;renderBoard();}});
+$("#posList").addEventListener("click",e=>{
+  const ed=e.target.closest("[data-edit]"),cd=e.target.closest("[data-card]");
+  if(ed)openEditor(players().find(p=>p.id===ed.dataset.edit));
+  else if(cd){cardIdx=cardOrderList().findIndex(p=>p.id===cd.dataset.card);document.querySelector('nav.tabs [data-v="card"]').click();}
+});
+$("#addBtn").onclick=()=>openEditor(null);
+$("#edCancel").onclick=closeEditor;
+$("#edSave").onclick=saveEditor;
+$("#edDelete").onclick=()=>{if(!confirm("Delete this prospect?"))return;S.classes[S.current].players=players().filter(p=>p.id!==editing.id);delete S.checks[editing.id];save();closeEditor();renderAll();toast("Deleted");};
+$("#classSel").onchange=e=>{S.current=e.target.value;save();cardIdx=0;renderAll();};
+$("#newClassBtn").onclick=()=>{
+  const ks=Object.keys(S.classes).map(Number).filter(n=>!isNaN(n));
+  const sug=ks.length?Math.max(...ks)+1:new Date().getFullYear()+1;
+  const y=prompt("Draft class year (e.g. 2028):",sug);if(!y)return;const k=y.trim();
+  if(S.classes[k]){S.current=k;}else{S.classes[k]={players:[]};S.current=k;}
+  save();renderAll();toast("Class of "+k);
+};
+$("#strength").oninput=e=>{S.strength=+e.target.value;$("#strengthVal").textContent=S.strength;save();};
+$("#targets").addEventListener("click",e=>{const b=e.target.closest("[data-t]");if(!b)return;const p=b.dataset.t;S.targets[p]=clamp(target(p)+(+b.dataset.d),3,5);save();renderData();renderBoard();});
+$("#expJson").onclick=()=>download(`draft-bridge-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(S,null,1),"application/json");
+$("#copyJson").onclick=async()=>{const t=JSON.stringify(S);try{await navigator.clipboard.writeText(t);toast("Backup copied. Paste it into Notes");}catch(e){$("#impText").value=t;$("#impText").select();toast("Copy blocked. JSON is in the box below");}};
+$("#expCsv").onclick=()=>download(`draft-bridge-class-${S.current}.csv`,buildCsv(),"text/csv");
+$("#impFileBtn").onclick=()=>$("#impFile").click();
+$("#impFile").onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(importJson);e.target.value="";};
+$("#impPaste").onclick=()=>{if(importJson($("#impText").value))$("#impText").value="";};
+$("#delClass").onclick=()=>{
+  if(!confirm(`Delete Class of ${S.current} and all its players?`))return;
+  players().forEach(p=>delete S.checks[p.id]);delete S.classes[S.current];
+  if(!Object.keys(S.classes).length){const d=defaultState();S.classes=d.classes;}
+  S.current=Object.keys(S.classes)[0];save();renderAll();toast("Class deleted");
+};
+// expose for testing
+window.__DB={get state(){return S;},convert,buildCsv};
+renderAll();
+</script>
+</body>
+</html>
